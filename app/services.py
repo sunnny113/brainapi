@@ -101,8 +101,15 @@ def _candidate_providers(capability: str) -> list[str]:
 
 def _run_with_fallback(capability: str, runner):
     attempts = []
+    candidates = _candidate_providers(capability)
 
-    for provider in _candidate_providers(capability):
+    if not candidates:
+        raise ProviderCallError(
+            500,
+            f"No providers are configured for {capability}. Check PROVIDER and PROVIDER_FALLBACK_ORDER settings.",
+        )
+
+    for provider in candidates:
         if not _provider_is_configured(provider):
             attempts.append((provider, Exception("provider not configured")))
             continue
@@ -119,6 +126,12 @@ def _run_with_fallback(capability: str, runner):
         last_provider, last_exc = attempts[-1]
         error_text = str(last_exc).lower()
 
+        if all("provider not configured" in str(exc).lower() for _, exc in attempts):
+            status_code = 503
+            detail = (
+                "AI provider credentials are not configured. "
+                "Set provider API keys in environment variables."
+            )
         if any(token in error_text for token in ("insufficient_quota", "quota", "billing", "payment")):
             status_code = 402
             detail = (
@@ -135,7 +148,7 @@ def _run_with_fallback(capability: str, runner):
             status_code = 503
             detail = f"{last_provider} provider is temporarily unreachable. Please retry."
 
-    raise ProviderCallError(status_code, f"{detail}. Attempts: {attempts}")
+    raise ProviderCallError(status_code, detail)
 
 
 # TEXT GENERATION

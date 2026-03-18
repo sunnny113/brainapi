@@ -186,37 +186,110 @@ def _b64url_decode(data: str) -> bytes:
 
 
 def create_session_token(*, user_id: str, email: str) -> str:
-    expires_at = int((_utc_now() + timedelta(days=7)).timestamp())
-    payload = {"sub": user_id, "email": email, "exp": expires_at, "typ": "session"}
-    payload_bytes = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    encoded_payload = _b64url_encode(payload_bytes)
+    now = _utc_now()
+    issued_at = int(now.timestamp())
+    expires_at = int((now + timedelta(days=7)).timestamp())
+
+    header = {"alg": "HS256", "typ": "JWT"}
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "iat": issued_at,
+        "exp": expires_at,
+        "typ": "session",
+    }
+
+    encoded_header = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
+    encoded_payload = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
+    signing_input = f"{encoded_header}.{encoded_payload}"
+
     signature = hmac.new(
         settings.auth_token_secret.encode("utf-8"),
-        encoded_payload.encode("ascii"),
+        signing_input.encode("ascii"),
         hashlib.sha256,
     ).digest()
-    return f"{encoded_payload}.{_b64url_encode(signature)}"
+
+    return f"{signing_input}.{_b64url_encode(signature)}"
 
 
-def verify_session_token(token: str) -> dict | None:
+def _verify_legacy_session_token(token: str) -> dict | None:
     try:
         encoded_payload, encoded_signature = token.split(".", 1)
     except ValueError:
         return None
 
-    expected_signature = hmac.new(
-        settings.auth_token_secret.encode("utf-8"),
-        encoded_payload.encode("ascii"),
-        hashlib.sha256,
-    ).digest()
+    secrets_to_try = [settings.auth_token_secret]
+    if settings.auth_token_secret_previous.strip():
+        secrets_to_try.append(settings.auth_token_secret_previous)
 
+    actual_signature: bytes
+    payload: dict
     try:
         actual_signature = _b64url_decode(encoded_signature)
         payload = json.loads(_b64url_decode(encoded_payload).decode("utf-8"))
     except (ValueError, json.JSONDecodeError, UnicodeDecodeError):
         return None
 
-    if not hmac.compare_digest(actual_signature, expected_signature):
+    signed_ok = False
+    for secret in secrets_to_try:
+        expected_signature = hmac.new(
+            secret.encode("utf-8"),
+            encoded_payload.encode("ascii"),
+            hashlib.sha256,
+        ).digest()
+        if hmac.compare_digest(actual_signature, expected_signature):
+            signed_ok = True
+            break
+
+    if not signed_ok:
+        return None
+
+    if payload.get("typ") != "session":
+        return None
+
+    expires_at = payload.get("exp")
+    if not isinstance(expires_at, int) or expires_at < int(_utc_now().timestamp()):
+        return None
+
+    return payload
+
+
+def verify_session_token(token: str) -> dict | None:
+    parts = token.split(".")
+    if len(parts) == 2:
+        return _verify_legacy_session_token(token)
+    if len(parts) != 3:
+        return None
+
+    encoded_header, encoded_payload, encoded_signature = parts
+
+    try:
+        header = json.loads(_b64url_decode(encoded_header).decode("utf-8"))
+        payload = json.loads(_b64url_decode(encoded_payload).decode("utf-8"))
+        actual_signature = _b64url_decode(encoded_signature)
+    except (ValueError, json.JSONDecodeError, UnicodeDecodeError):
+        return None
+
+    if header.get("typ") != "JWT" or header.get("alg") != "HS256":
+        return None
+
+    signing_input = f"{encoded_header}.{encoded_payload}"
+    secrets_to_try = [settings.auth_token_secret]
+    if settings.auth_token_secret_previous.strip():
+        secrets_to_try.append(settings.auth_token_secret_previous)
+
+    signed_ok = False
+    for secret in secrets_to_try:
+        expected_signature = hmac.new(
+            secret.encode("utf-8"),
+            signing_input.encode("ascii"),
+            hashlib.sha256,
+        ).digest()
+        if hmac.compare_digest(actual_signature, expected_signature):
+            signed_ok = True
+            break
+
+    if not signed_ok:
         return None
 
     if payload.get("typ") != "session":

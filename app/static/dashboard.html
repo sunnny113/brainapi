@@ -804,7 +804,8 @@
         if (
           message.includes('unauthorized') ||
           message.includes('token') ||
-          message.includes('account not found')
+          message.includes('account not found') ||
+          message.includes('session is no longer valid')
         ) {
           clearToken();
           const reason = message.includes('account not found') ? 'session-reset' : 'session-expired';

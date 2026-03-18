@@ -447,7 +447,10 @@ def get_me(session: dict = Depends(_require_session)):
     with SessionLocal() as db:
         user = db.get(UserAccount, user_id)
         if user is None or not user.is_active:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session is no longer valid. Please sign in again.",
+            )
 
         key_info: dict | None = None
         if user.api_key_id:

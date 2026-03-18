@@ -82,6 +82,7 @@ class Settings(BaseSettings):
     email_from_name: str = "BrainAPI"
     email_reply_to: str = ""
     auth_token_secret: str = "dev-brainapi-auth-secret"
+    auth_token_secret_previous: str = ""
     password_reset_token_ttl_minutes: int = 30
 
     def csv_to_list(self, value: str) -> list[str]:
