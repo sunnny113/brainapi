@@ -302,14 +302,9 @@ def startup_event():
     if settings.require_api_key and not settings.api_key_list:
         logger.warning("REQUIRE_API_KEY is enabled but API_KEYS is empty; only DB-managed keys can authenticate")
 
-
 @app.get("/")
-def web_ui():
-    index_file = static_dir / "index.html"
-    if not index_file.exists():
-        raise HTTPException(status_code=404, detail="UI not found")
-    return FileResponse(index_file)
-
+def home():
+    return {"message": "BrainAPI is running 🚀"}
 
 @app.get("/health")
 def health_check():
