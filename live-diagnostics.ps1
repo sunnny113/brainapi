@@ -116,7 +116,7 @@ catch {
     Write-Output "[FAIL] Could not parse /health JSON"
 }
 
-$failed = ($results | Where-Object { -not $_.passed }).Count
+$failed = @($results | Where-Object { -not $_.passed }).Count
 $total = $results.Count
 Write-Output ""
 Write-Output "Summary: $($total - $failed)/$total checks passed"
