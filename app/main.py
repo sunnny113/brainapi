@@ -425,14 +425,33 @@ def auth_reset_password(payload: AuthResetPasswordRequest):
 
 
 def _require_session(request: Request) -> dict:
-    """Dependency: verifies a session token from the Authorization: Bearer header."""
+    """
+    FastAPI dependency for JWT session validation.
+    
+    Extracts and validates JWT token from Authorization: Bearer header.
+    Returns token payload with user claims (sub=user_id, email, exp, iat, typ=session).
+    
+    Raises HTTP 401 if token is missing, invalid, or expired.
+    Used on all protected routes requiring authenticated sessions.
+    
+    Token format: HS256 JWT with 7-day expiry, supports secret rotation via AUTH_TOKEN_SECRET_PREVIOUS.
+    """
     auth_header = request.headers.get("authorization", "")
     if not auth_header.lower().startswith("bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session token required")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session token required in Authorization: Bearer header"
+        )
+    
     token = auth_header[7:].strip()
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session token is empty")
+    
     payload = verify_session_token(token)
     if payload is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session token")
+    
+    # Payload contains: {sub: user_id, email, iat, exp, typ: "session"}
     return payload
 
 
@@ -503,6 +522,36 @@ def revoke_my_api_key(session: dict = Depends(_require_session)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active API key found")
 
     return {"success": True, "message": "API key revoked."}
+
+
+@app.post("/api/v1/auth/refresh")
+def refresh_session_token(session: dict = Depends(_require_session)):
+    """
+    Refresh the current session token.
+    
+    Call this endpoint before token expiry (7 days) to extend the session.
+    Frontend can automatically refresh tokens 1 day before expiry to maintain continuity.
+    
+    Request: Authorization: Bearer <current_token>
+    Response: { token: <new_token> }
+    
+    New token has fresh 7-day expiry, same user claims and typ: session.
+    """
+    user_id = session.get("sub")
+    email = session.get("email")
+    
+    if not isinstance(user_id, str) or not user_id.strip():
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session token")
+    if not isinstance(email, str) or not email.strip():
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid session token")
+    
+    # Generate fresh token with new expiry (7 days from now)
+    new_token = create_session_token(user_id=user_id, email=email)
+    
+    return {
+        "message": "Session refreshed successfully.",
+        "token": new_token,
+    }
 
 
 @app.get("/api/v1/public/plans", response_model=PublicPlansResponse)

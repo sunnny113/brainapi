@@ -739,6 +739,109 @@
       }, 2000);
     }
 
+    /**
+     * JWT Token Management
+     * 
+     * Token Storage:
+     *   - Persisted in localStorage (brainapi.authToken) for "remember me"
+     *   - Falls back to sessionStorage for temporary sessions
+     *   - Cleared on logout via clearToken()
+     * 
+     * Token Format:
+     *   - JWT HS256 3-part format: header.payload.signature
+     *   - Issued: 7-day expiry from login/signup or refresh
+     *   - Payload: {sub: user_id, email, iat, exp, typ: "session"}
+     *   - Signed with AUTH_TOKEN_SECRET (supports rotation via AUTH_TOKEN_SECRET_PREVIOUS)
+     * 
+     * Validation:
+     *   - All protected routes require: Authorization: Bearer <token> header
+     *   - Backend validates signature, expiry, and typ claim
+     *   - Returns 401 Unauthorized if token invalid/expired
+     */
+
+    function decodeJwtPayload(token) {
+      try {
+        if (!token || typeof token !== 'string') return null;
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;  // Not a valid JWT
+        
+        const encodedPayload = parts[1];
+        const padding = '='.repeat((4 - encodedPayload.length % 4) % 4);
+        const decoded = atob(encodedPayload + padding);
+        return JSON.parse(decoded);
+      } catch (e) {
+        console.error('Failed to decode JWT:', e);
+        return null;
+      }
+    }
+
+    function isTokenExpiringSoon(token, thresholdMinutes = 1440) {
+      const payload = decodeJwtPayload(token);
+      if (!payload || !payload.exp) return false;
+      
+      const expiryTime = payload.exp * 1000;  // Convert to milliseconds
+      const now = Date.now();
+      const timeUntilExpiry = expiryTime - now;
+      const thresholdMs = thresholdMinutes * 60 * 1000;
+      
+      return timeUntilExpiry < thresholdMs;
+    }
+
+    async function refreshSessionToken() {
+      try {
+        const currentToken = getToken();
+        if (!currentToken) return false;
+        
+        const res = await fetch('/api/v1/auth/refresh', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${currentToken}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!res.ok) {
+          console.error('Token refresh failed:', res.status);
+          return false;
+        }
+        
+        const data = await res.json();
+        if (data.token) {
+          localStorage.setItem('brainapi.authToken', data.token);
+          sessionStorage.setItem('brainapi.authToken', data.token);
+          console.log('Session token refreshed successfully');
+          return true;
+        }
+      } catch (e) {
+        console.error('Token refresh error:', e);
+      }
+      return false;
+    }
+
+    function scheduleTokenRefresh() {
+      const token = getToken();
+      if (!token) return;
+      
+      const payload = decodeJwtPayload(token);
+      if (!payload || !payload.exp) return;
+      
+      const expiryTime = payload.exp * 1000;
+      const now = Date.now();
+      const timeUntilExpiry = expiryTime - now;
+      
+      // Refresh 24 hours before expiry (7-day tokens expire ~6 days from now)
+      const refreshIn = timeUntilExpiry - (24 * 60 * 60 * 1000);
+      
+      if (refreshIn > 0) {
+        console.log(`Token will auto-refresh in ${Math.round(refreshIn / 1000 / 60)} minutes`);
+        setTimeout(async () => {
+          await refreshSessionToken();
+          scheduleTokenRefresh();  // Schedule next refresh
+        }, refreshIn);
+      }
+    }
+
     async function loadDashboard() {
       const token = getToken();
       if (!token) {
@@ -797,6 +900,7 @@
         }
 
         loadUsageChart();
+        scheduleTokenRefresh();  // Auto-refresh token 24 hours before expiry
 
         setStatus('ok', 'Dashboard ready.');
       } catch (error) {
