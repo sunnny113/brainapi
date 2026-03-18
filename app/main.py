@@ -311,6 +311,16 @@ def web_ui():
     return FileResponse("app/static/index.html")
 
 
+@app.get("/favicon.ico")
+def favicon_ico():
+    return FileResponse("app/static/favicon.svg", media_type="image/svg+xml")
+
+
+@app.get("/favicon.svg")
+def favicon_svg():
+    return FileResponse("app/static/favicon.svg", media_type="image/svg+xml")
+
+
 @app.get("/google837a0fffd89d0450.html")
 def google_site_verification():
     return FileResponse("app/static/google837a0fffd89d0450.html", media_type="text/html")
@@ -773,6 +783,36 @@ def billing_checkout(payload: BillingCheckoutRequest, auth=Depends(require_api_k
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     return RazorpayOrderResponse(**order)
+
+
+@app.post("/api/v1/billing/razorpay/verify", response_model=RazorpayVerifyPaymentResponse)
+def billing_verify_razorpay_payment(payload: RazorpayVerifyPaymentRequest, auth=Depends(require_api_key)):
+    if not auth.key_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Managed DB API key required for verification")
+
+    if payload.api_key_id != auth.key_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="API key mismatch for payment verification")
+
+    marked_paid = verify_and_mark_paid(
+        api_key_id=auth.key_id,
+        order_id=payload.razorpay_order_id,
+        payment_id=payload.razorpay_payment_id,
+        signature=payload.razorpay_signature,
+    )
+
+    if marked_paid:
+        contact = get_lead_contact_for_api_key(auth.key_id)
+        if contact:
+            try:
+                queue_payment_success_email(
+                    name=contact["name"],
+                    email=contact["email"],
+                    plan_name=settings.default_plan_name,
+                )
+            except Exception as exc:
+                logger.warning("Payment success email queue failed: %s", exc)
+
+    return RazorpayVerifyPaymentResponse(verified=marked_paid, marked_paid=marked_paid)
 
 
 @app.post("/api/v1/text/generate", response_model=TextGenerateResponse)

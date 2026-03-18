@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>BrainAPI Dashboard</title>
+  <meta name="description" content="BrainAPI dashboard for API keys, usage analytics, billing, and playground tools." />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -1050,15 +1053,12 @@
       }
     }
 
-    async function verifyPayment(apiKeyId, orderId, paymentId, signature) {
-      const adminKey = getAdminKey();
-      if (!adminKey) throw new Error('Admin key missing for payment verification.');
-
-      const res = await fetch('/api/v1/admin/billing/razorpay/verify', {
+    async function verifyPayment(apiKey, apiKeyId, orderId, paymentId, signature) {
+      const res = await fetch('/api/v1/billing/razorpay/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-key': adminKey
+          'x-api-key': apiKey
         },
         body: JSON.stringify({
           api_key_id: apiKeyId,
@@ -1115,6 +1115,7 @@
           handler: async (payment) => {
             try {
               await verifyPayment(
+                apiKey,
                 checkout.api_key_id,
                 payment.razorpay_order_id,
                 payment.razorpay_payment_id,
