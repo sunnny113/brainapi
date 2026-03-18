@@ -302,9 +302,11 @@ def startup_event():
     if settings.require_api_key and not settings.api_key_list:
         logger.warning("REQUIRE_API_KEY is enabled but API_KEYS is empty; only DB-managed keys can authenticate")
 
+from fastapi.responses import FileResponse
+
 @app.get("/")
-def home():
-    return {"message": "BrainAPI is running 🚀"}
+def web_ui():
+    return FileResponse("app/static/index.html")
 
 @app.get("/health")
 def health_check():
