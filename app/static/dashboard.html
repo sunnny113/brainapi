@@ -83,7 +83,7 @@
       .sidebar.open { display: block; order: 0; }
       .cards { grid-template-columns: 1fr; }
       .grid-2, .pricing { grid-template-columns: 1fr; }
-      .topnav a:nth-child(1), .topnav a:nth-child(2) { display: none; }
+      .topnav a.nav-secondary { display: none; }
       .hamburger { display: block; }
     }
   </style>
@@ -93,8 +93,9 @@
     <div class="topbar-inner">
       <div class="brand"><div class="logo">B</div>BrainAPI</div>
       <nav class="topnav">
-        <a href="/ui/dashboard.html">Dashboard</a>
-        <a href="/docs">Docs</a>
+        <a id="homeBtn" href="/">Home</a>
+        <a class="nav-secondary" href="/ui/dashboard.html">Dashboard</a>
+        <a class="nav-secondary" href="/docs">Docs</a>
         <button id="billingTopBtn" type="button">Billing</button>
         <button id="logoutBtn" type="button">Logout</button>
         <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu" type="button">
@@ -352,6 +353,7 @@
 
     const apiKeyInput = document.getElementById('apiKeyInput');
 
+    const homeBtn = document.getElementById('homeBtn');
     const billingTopBtn = document.getElementById('billingTopBtn');
     const billingBtn = document.getElementById('billingBtn');
     const upgradeBtn = document.getElementById('upgradeBtn');
@@ -1312,7 +1314,15 @@
     speechBtn.addEventListener('click', runSpeech);
     automationBtn.addEventListener('click', runAutomation);
 
+    homeBtn.addEventListener('click', (event) => {
+      event.preventDefault();
+      window.location.href = '/';
+    });
+
     logoutBtn.addEventListener('click', () => {
+      if (!window.confirm('Are you sure you want to log out?')) {
+        return;
+      }
       clearToken();
       window.location.href = '/';
     });
