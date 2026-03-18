@@ -1,0 +1,55 @@
+﻿{
+    "base_url":  "http://localhost:8000",
+    "provider":  "openai",
+    "total":  9,
+    "passed":  6,
+    "failed":  3,
+    "generated_at_utc":  "2026-03-18T09:34:29.5945561Z",
+    "results":  [
+                    {
+                        "Name":  "GET /health",
+                        "Passed":  true,
+                        "Detail":  "HTTP 200"
+                    },
+                    {
+                        "Name":  "POST /api/v1/text/generate",
+                        "Passed":  false,
+                        "Detail":  "The remote server returned an error: (500) Internal Server Error."
+                    },
+                    {
+                        "Name":  "POST /api/v1/image/generate",
+                        "Passed":  false,
+                        "Detail":  "The remote server returned an error: (500) Internal Server Error."
+                    },
+                    {
+                        "Name":  "POST /api/v1/speech/transcribe",
+                        "Passed":  false,
+                        "Detail":  "HTTP 500"
+                    },
+                    {
+                        "Name":  "POST /api/v1/automation/run",
+                        "Passed":  true,
+                        "Detail":  "HTTP 200"
+                    },
+                    {
+                        "Name":  "POST /api/v1/admin/api-keys",
+                        "Passed":  true,
+                        "Detail":  "HTTP 200"
+                    },
+                    {
+                        "Name":  "GET /api/v1/admin/api-keys",
+                        "Passed":  true,
+                        "Detail":  "HTTP 200"
+                    },
+                    {
+                        "Name":  "DELETE /api/v1/admin/api-keys/{key_id}",
+                        "Passed":  true,
+                        "Detail":  "HTTP 200"
+                    },
+                    {
+                        "Name":  "GET /api/v1/admin/usage",
+                        "Passed":  true,
+                        "Detail":  "HTTP 200"
+                    }
+                ]
+}

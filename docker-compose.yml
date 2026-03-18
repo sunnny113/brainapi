@@ -1,0 +1,47 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brainapi-api
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: brainapi-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-brainapi}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: "Arumi@$$suny143"
+    ports:
+      - "5432:5432"
+    volumes:
+      - brainapi_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d brainapi"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: brainapi-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - brainapi_redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  brainapi_postgres_data:
+  brainapi_redis_data:

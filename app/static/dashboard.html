@@ -1,0 +1,1271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrainAPI Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <link rel="stylesheet" href="/ui/brainapi-ui.css" />
+  <style>
+    :root {
+      --bg: #070709;
+      --card: #0f0f12;
+      --border: rgba(255,255,255,0.08);
+      --muted: #8b8b95;
+      --brand: #00c896;
+      --danger: #ff6b6b;
+      --warning: #ffb56a;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: #ececf0; font-family: Inter, system-ui, sans-serif; }
+    .topbar { position: sticky; top: 0; z-index: 30; height: 64px; border-bottom: 1px solid var(--border); background: rgba(7,7,9,.9); backdrop-filter: blur(8px); }
+    .topbar-inner { max-width: 1280px; margin: 0 auto; height: 100%; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .logo { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; color: #fff; background: linear-gradient(135deg,#00c896,#7c6cf2); }
+    .topnav { display: flex; align-items: center; gap: 12px; }
+    .topnav a, .topnav button { color: var(--muted); background: transparent; border: 0; font-size: 14px; cursor: pointer; }
+    .topnav a:hover, .topnav button:hover { color: #fff; }
+    .hamburger { display: none; background: transparent; border: 0; cursor: pointer; padding: 6px; }
+    .hamburger span { display: block; width: 22px; height: 2px; background: #ccc; margin: 4px 0; border-radius: 2px; transition: .2s; }
+
+    .layout { max-width: 1280px; margin: 0 auto; padding: 18px; display: grid; grid-template-columns: 220px 1fr; gap: 18px; }
+    .sidebar { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 12px; height: fit-content; }
+    .side-link { display: block; padding: 10px 12px; border-radius: 10px; color: var(--muted); text-decoration: none; font-size: 14px; }
+    .side-link.active, .side-link:hover { color: #fff; background: rgba(255,255,255,0.04); }
+
+    .panel { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .page-title { font-size: 26px; margin: 0 0 6px; }
+    .muted { color: var(--muted); }
+
+    .cards { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 14px; }
+    .card { background: #0b0b0f; border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .card-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+    .card-value { font-size: 24px; font-weight: 700; margin-top: 6px; }
+
+    .btn { border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; font-weight: 600; cursor: pointer; transition: .2s; }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+    .btn-primary { background: var(--brand); color: #05130f; border: none; }
+    .btn-primary:hover:not(:disabled) { background: #00ad82; }
+    .btn-secondary { color: #ddd; background: transparent; }
+    .btn-secondary:hover:not(:disabled) { border-color: rgba(255,255,255,.25); }
+
+    .stack { display: grid; gap: 12px; }
+    .field { width: 100%; background: #09090c; color: #ececf0; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font: inherit; }
+    .field:focus { outline: none; border-color: rgba(0,200,150,.6); }
+    .section-title { margin: 0 0 8px; font-size: 18px; }
+    .subheading { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    pre.output { margin: 0; min-height: 110px; max-height: 260px; overflow: auto; background: #09090c; border: 1px solid var(--border); border-radius: 10px; padding: 12px; font-size: 12px; }
+
+    .status { border-radius: 10px; border: 1px solid var(--border); padding: 10px 12px; font-size: 14px; }
+    .status.ok { color: var(--brand); background: rgba(0,200,150,0.08); }
+    .status.warn { color: var(--warning); background: rgba(255,181,106,0.08); }
+    .status.error { color: var(--danger); background: rgba(255,107,107,0.08); }
+
+    .pricing { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .price-card { background: #0b0b0f; border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .price-card h4 { margin: 0; font-size: 17px; }
+    .price-card p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,.72); display: none; align-items: center; justify-content: center; z-index: 50; }
+    .modal.show { display: flex; }
+    .modal-card { width: min(560px, calc(100% - 28px)); background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+    .toast-wrap { position: fixed; right: 16px; bottom: 16px; z-index: 70; display: grid; gap: 8px; }
+    .toast { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; min-width: 220px; background: #0b0b0f; font-size: 13px; }
+    .toast.ok { color: var(--brand); border-color: rgba(0,200,150,.35); }
+    .toast.error { color: var(--danger); border-color: rgba(255,107,107,.35); }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { order: 2; display: none; }
+      .sidebar.open { display: block; order: 0; }
+      .cards { grid-template-columns: 1fr; }
+      .grid-2, .pricing { grid-template-columns: 1fr; }
+      .topnav a:nth-child(1), .topnav a:nth-child(2) { display: none; }
+      .hamburger { display: block; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><div class="logo">B</div>BrainAPI</div>
+      <nav class="topnav">
+        <a href="/ui/dashboard.html">Dashboard</a>
+        <a href="/docs">Docs</a>
+        <button id="billingTopBtn" type="button">Billing</button>
+        <button id="logoutBtn" type="button">Logout</button>
+        <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu" type="button">
+          <span></span><span></span><span></span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar" id="sidebar">
+      <a class="side-link active" href="#overview">Overview</a>
+      <a class="side-link" href="#api-keys">API Keys</a>
+      <a class="side-link" href="#usageSection">Usage</a>
+      <a class="side-link" href="#billing">Billing</a>
+      <a class="side-link" href="#playground">Playground</a>
+      <a class="side-link" href="#settings">Settings</a>
+    </aside>
+
+    <section class="stack">
+      <section id="overview" class="panel">
+        <h1 class="page-title">Dashboard</h1>
+        <p id="userLine" class="muted">Loading user info...</p>
+        <div id="globalStatus" class="status warn" style="margin-top:10px;">Loading...</div>
+        <p id="systemStatus" class="muted" style="margin:10px 0 0;font-size:13px;">All systems operational</p>
+
+        <div class="cards" id="usage">
+          <div class="card">
+            <div class="card-label">Requests (24h)</div>
+            <div class="card-value" id="requestsCount">—</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Plan Status</div>
+            <div class="card-value" id="planValue">Free</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Rate Limit</div>
+            <div class="card-value" id="rateLimitValue">—</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="api-keys" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <h3 class="section-title">API Keys</h3>
+            <p class="subheading">Create and manage your security credentials.</p>
+          </div>
+          <button class="btn btn-primary" id="newKeyBtn">+ New Key</button>
+        </div>
+        <div id="keysTableWrap" style="margin-top:14px;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead style="border-bottom:1px solid var(--border);">
+              <tr>
+                <th style="text-align:left;padding:10px;color:var(--muted);font-weight:500;">Name</th>
+                <th style="text-align:left;padding:10px;color:var(--muted);font-weight:500;">Key Prefix</th>
+                <th style="text-align:left;padding:10px;color:var(--muted);font-weight:500;">Created</th>
+                <th style="text-align:left;padding:10px;color:var(--muted);font-weight:500;">Last Used</th>
+                <th style="text-align:right;padding:10px;color:var(--muted);font-weight:500;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="keysTableBody">
+              <tr>
+                <td colspan="5" style="padding:20px;text-align:center;color:var(--muted);">No API key yet — create one to start.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;">
+          <label class="subheading" for="apiKeyInput">Test Key for Playground</label>
+          <input id="apiKeyInput" class="field" placeholder="Paste API key to test endpoints" />
+        </div>
+      </section>
+
+      <section id="usageSection" class="panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div>
+            <h3 class="section-title">Usage</h3>
+            <p class="subheading">API request activity over the past 24 hours.</p>
+          </div>
+          <button class="btn btn-secondary" id="refreshUsageBtn" style="padding:8px 12px;font-size:13px;">Refresh</button>
+        </div>
+        <div style="position:relative;height:220px;">
+          <canvas id="usageChart"></canvas>
+          <div id="usageChartEmpty" class="muted" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;display:none;">No usage data yet.</div>
+        </div>
+        <div id="usageBreakdown" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;"></div>
+      </section>
+
+      <section id="settings" class="panel">
+        <h3 class="section-title">Settings</h3>
+        <p class="subheading">Configure your admin credentials to manage API keys and billing.</p>
+        <div id="adminKeyMissingBanner" class="status warn" style="display:none;margin-bottom:12px;">Admin key not set — API key creation and billing operations will fail until you save it below.</div>
+        <div id="adminKeySavedBanner" class="status ok" style="display:none;margin-bottom:12px;">✓ Admin key saved and ready.</div>
+        <label class="subheading" for="adminKeySettingInput">Admin API Key</label>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <input id="adminKeySettingInput" class="field" type="password" placeholder="Paste your ADMIN_API_KEY from .env" style="flex:1;" />
+          <button class="btn btn-primary" id="saveAdminKeyBtn">Save</button>
+          <button class="btn btn-secondary" id="clearAdminKeyBtn">Clear</button>
+        </div>
+        <p class="muted" style="margin-top:8px;font-size:12px;">Stored only in your browser's localStorage. Never sent anywhere except to your own server.</p>
+      </section>
+
+      <section id="billing" class="panel">
+        <h3 class="section-title">Billing</h3>
+        <p class="subheading">Choose the plan that fits your usage.</p>
+        <div id="currentPlanBanner" class="status ok" style="margin-bottom:14px;display:none;"></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:16px;">
+          <div class="price-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <h4 style="margin:0;">Free</h4>
+              <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,0.06);color:var(--muted);">Trial</span>
+            </div>
+            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">$0</div>
+            <p style="color:var(--muted);font-size:13px;margin:0;">50k tokens/month<br>Testing & early dev</p>
+          </div>
+          <div class="price-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <h4 style="margin:0;">Starter</h4>
+              <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(0,200,150,0.1);color:var(--brand);">Popular</span>
+            </div>
+            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">$4<span style="font-size:14px;font-weight:400;color:var(--muted);">/mo</span></div>
+            <p style="color:var(--muted);font-size:13px;margin:0;">1M tokens<br>Solo developers</p>
+          </div>
+          <div class="price-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <h4 style="margin:0;">Pro</h4>
+              <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(124,108,242,0.15);color:#a89af5;">Best value</span>
+            </div>
+            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">$9<span style="font-size:14px;font-weight:400;color:var(--muted);">/mo</span></div>
+            <p style="color:var(--muted);font-size:13px;margin:0;">3M tokens<br>Startups & teams</p>
+          </div>
+          <div class="price-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+              <h4 style="margin:0;">Business</h4>
+              <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,181,106,0.1);color:var(--warning);">Enterprise</span>
+            </div>
+            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">$19<span style="font-size:14px;font-weight:400;color:var(--muted);">/mo</span></div>
+            <p style="color:var(--muted);font-size:13px;margin:0;">10M tokens<br>SaaS & production</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="upgradeBtn">Upgrade Now</button>
+          <button class="btn btn-secondary" id="billingBtn">Manage Billing</button>
+        </div>
+      </section>
+
+      <section id="playground" class="panel">
+        <h3 class="section-title">Playground</h3>
+        <p class="subheading">Simple input → action → output testing panels.</p>
+
+        <div class="grid-2">
+          <div class="card stack">
+            <h4 style="margin:0;">Text</h4>
+            <textarea id="textPrompt" class="field" rows="4" placeholder="Enter prompt"></textarea>
+            <button class="btn btn-primary" id="textBtn">Generate</button>
+            <pre class="output" id="textOut">Output appears here.</pre>
+          </div>
+          <div class="card stack">
+            <h4 style="margin:0;">Image</h4>
+            <input id="imagePrompt" class="field" placeholder="Enter image prompt" />
+            <button class="btn btn-primary" id="imageBtn">Generate</button>
+            <img id="imagePreview" alt="Generated" style="max-width:100%;border-radius:10px;display:none;border:1px solid var(--border);" />
+            <pre class="output" id="imageOut">Output appears here.</pre>
+          </div>
+          <div class="card stack">
+            <h4 style="margin:0;">Speech</h4>
+            <input id="speechFile" class="field" type="file" />
+            <button class="btn btn-primary" id="speechBtn">Transcribe</button>
+            <pre class="output" id="speechOut">Output appears here.</pre>
+          </div>
+          <div class="card stack">
+            <h4 style="margin:0;">Automation</h4>
+            <textarea id="automationPayload" class="field" rows="6" placeholder='{"name":"test","steps":[{"type":"delay","seconds":1}]}'></textarea>
+            <button class="btn btn-primary" id="automationBtn">Run</button>
+            <pre class="output" id="automationOut">Output appears here.</pre>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <footer style="border-top:1px solid var(--border);padding:14px 18px;color:var(--muted);font-size:12px;text-align:center;">Built with BrainAPI</footer>
+
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <div class="modal" id="keyModal" role="dialog" aria-modal="true" aria-labelledby="keyModalTitle">
+    <div class="modal-card">
+      <h3 id="keyModalTitle" style="margin:0 0 8px;">API Key Created</h3>
+      <p class="muted" style="margin:0 0 10px;">Save this key now. You won't be able to see it again.</p>
+      <input id="keyModalValue" class="field" readonly />
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+        <button class="btn btn-secondary" id="copyKeyModalBtn">Copy</button>
+        <button class="btn btn-primary" id="closeKeyModalBtn">Done</button>
+      </div>
+      <p id="copyFeedback" class="muted" style="margin:8px 0 0;font-size:12px;color:var(--brand);">✓ Copied to clipboard</p>
+    </div>
+  </div>
+
+  <div class="modal" id="adminKeyPromptModal" role="dialog" aria-modal="true" aria-labelledby="adminKeyPromptTitle">
+    <div class="modal-card">
+      <h3 id="adminKeyPromptTitle" style="margin:0 0 8px;">Admin Key Required</h3>
+      <p class="muted" style="margin:0 0 12px;font-size:13px;">Enter your <code style="background:#09090c;padding:2px 6px;border-radius:4px;">ADMIN_API_KEY</code> from your <code style="background:#09090c;padding:2px 6px;border-radius:4px;">.env</code> file to manage API keys.</p>
+      <input id="adminKeyPromptInput" class="field" type="password" placeholder="Paste ADMIN_API_KEY" />
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+        <button class="btn btn-secondary" id="cancelAdminKeyPromptBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveAdminKeyPromptBtn">Save & Continue</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0;font-size:12px;">You can also set this anytime in the Settings section.</p>
+    </div>
+  </div>
+
+  <div class="modal" id="confirmRevokeModal" role="dialog" aria-modal="true" aria-labelledby="confirmRevokeTitle">
+    <div class="modal-card">
+      <h3 id="confirmRevokeTitle" style="margin:0 0 8px;">Revoke API Key?</h3>
+      <p class="muted" style="margin:0 0 12px;">Are you sure you want to revoke this key? This action cannot be undone.</p>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+        <button class="btn btn-secondary" id="cancelRevokeBtn">Cancel</button>
+        <button class="btn btn-secondary" id="confirmRevokeBtn" style="border-color:var(--danger);color:var(--danger);">Revoke</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="createKeyModal" role="dialog" aria-modal="true" aria-labelledby="createKeyTitle">
+    <div class="modal-card">
+      <h3 id="createKeyTitle" style="margin:0 0 12px;">Create New API Key</h3>
+      <p class="muted" style="margin:0 0 12px;font-size:13px;">Give your key a descriptive name for easy identification.</p>
+      <input id="keyNameInput" class="field" placeholder="e.g., Production API Key, Testing, Mobile App" />
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px;">
+        <button class="btn btn-secondary" id="cancelCreateKeyBtn">Cancel</button>
+        <button class="btn btn-primary" id="confirmCreateKeyBtn">Create Key</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="keyRevealModal" role="dialog" aria-modal="true" aria-labelledby="keyRevealTitle">
+    <div class="modal-card">
+      <h3 id="keyRevealTitle" style="margin:0 0 8px;">API Key Created</h3>
+      <p class="muted" style="margin:0 0 10px;font-size:13px;">Save this key now. You won't be able to see it again.</p>
+      <input id="keyRevealValue" class="field" readonly />
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px;">
+        <button class="btn btn-secondary" id="copyRevealKeyBtn">Copy</button>
+        <button class="btn btn-primary" id="doneRevealKeyBtn">Done</button>
+      </div>
+      <p id="revealCopyFeedback" class="muted" style="margin:8px 0 0;font-size:12px;color:var(--brand);display:none;">✓ Copied to clipboard</p>
+    </div>
+  </div>
+
+  <script>
+    const userLine = document.getElementById('userLine');
+    const globalStatus = document.getElementById('globalStatus');
+    const planValue = document.getElementById('planValue');
+    const requestsCount = document.getElementById('requestsCount');
+    const rateLimitValue = document.getElementById('rateLimitValue');
+
+    const apiKeyInput = document.getElementById('apiKeyInput');
+
+    const billingTopBtn = document.getElementById('billingTopBtn');
+    const billingBtn = document.getElementById('billingBtn');
+    const upgradeBtn = document.getElementById('upgradeBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const newKeyBtn = document.getElementById('newKeyBtn');
+    const keysTableBody = document.getElementById('keysTableBody');
+
+    const createKeyModal = document.getElementById('createKeyModal');
+    const keyNameInput = document.getElementById('keyNameInput');
+    const cancelCreateKeyBtn = document.getElementById('cancelCreateKeyBtn');
+    const confirmCreateKeyBtn = document.getElementById('confirmCreateKeyBtn');
+
+    const keyRevealModal = document.getElementById('keyRevealModal');
+    const keyRevealValue = document.getElementById('keyRevealValue');
+    const copyRevealKeyBtn = document.getElementById('copyRevealKeyBtn');
+    const doneRevealKeyBtn = document.getElementById('doneRevealKeyBtn');
+    const revealCopyFeedback = document.getElementById('revealCopyFeedback');
+
+    const confirmRevokeModal = document.getElementById('confirmRevokeModal');
+    const cancelRevokeBtn = document.getElementById('cancelRevokeBtn');
+    const confirmRevokeBtn = document.getElementById('confirmRevokeBtn');
+
+    const adminKeyPromptModal = document.getElementById('adminKeyPromptModal');
+    const adminKeyPromptInput = document.getElementById('adminKeyPromptInput');
+    const cancelAdminKeyPromptBtn = document.getElementById('cancelAdminKeyPromptBtn');
+    const saveAdminKeyPromptBtn = document.getElementById('saveAdminKeyPromptBtn');
+
+    const adminKeySettingInput = document.getElementById('adminKeySettingInput');
+    const saveAdminKeyBtn = document.getElementById('saveAdminKeyBtn');
+    const clearAdminKeyBtn = document.getElementById('clearAdminKeyBtn');
+    const adminKeyMissingBanner = document.getElementById('adminKeyMissingBanner');
+    const adminKeySavedBanner = document.getElementById('adminKeySavedBanner');
+
+    const textPrompt = document.getElementById('textPrompt');
+    const textBtn = document.getElementById('textBtn');
+    const textOut = document.getElementById('textOut');
+    const imagePrompt = document.getElementById('imagePrompt');
+    const imageBtn = document.getElementById('imageBtn');
+    const imageOut = document.getElementById('imageOut');
+    const imagePreview = document.getElementById('imagePreview');
+    const speechFile = document.getElementById('speechFile');
+    const speechBtn = document.getElementById('speechBtn');
+    const speechOut = document.getElementById('speechOut');
+    const automationPayload = document.getElementById('automationPayload');
+    const automationBtn = document.getElementById('automationBtn');
+    const automationOut = document.getElementById('automationOut');
+
+    let currentUser = null;
+    let allKeys = [];
+    let currentKeyIdToRevoke = null;
+    let usageChartInstance = null;
+
+    function getToken() {
+      return (
+        localStorage.getItem('brainapi.authToken') ||
+        sessionStorage.getItem('brainapi.authToken') ||
+        localStorage.getItem('authToken') ||
+        sessionStorage.getItem('authToken') ||
+        ''
+      );
+    }
+
+    function clearToken() {
+      localStorage.removeItem('brainapi.authToken');
+      sessionStorage.removeItem('brainapi.authToken');
+      localStorage.removeItem('authToken');
+      sessionStorage.removeItem('authToken');
+    }
+
+    function getAdminKey() {
+      return (
+        localStorage.getItem('brainapi_admin_key') ||
+        sessionStorage.getItem('brainapi_admin_key') ||
+        ''
+      );
+    }
+
+    function setStatus(type, message) {
+      globalStatus.className = 'status ' + type;
+      globalStatus.textContent = message;
+    }
+
+    function saveAdminKey(key) {
+      localStorage.setItem('brainapi_admin_key', key);
+    }
+
+    function clearAdminKey() {
+      localStorage.removeItem('brainapi_admin_key');
+      sessionStorage.removeItem('brainapi_admin_key');
+    }
+
+    function loadSettingsSection() {
+      const saved = getAdminKey();
+      if (saved) {
+        adminKeySettingInput.value = '';
+        adminKeySettingInput.placeholder = '••••••••••••••••••••••• (saved)';
+        adminKeyMissingBanner.style.display = 'none';
+        adminKeySavedBanner.style.display = 'block';
+        setTimeout(() => { adminKeySavedBanner.style.display = 'none'; }, 3000);
+      } else {
+        adminKeyMissingBanner.style.display = 'block';
+        adminKeySavedBanner.style.display = 'none';
+      }
+    }
+
+    // Returns admin key immediately, or prompts user and resolves after they save.
+    // Rejects if they cancel.
+    function requireAdminKey() {
+      return new Promise((resolve, reject) => {
+        const existing = getAdminKey();
+        if (existing) { resolve(existing); return; }
+        adminKeyPromptInput.value = '';
+        adminKeyPromptModal.classList.add('show');
+        adminKeyPromptInput.focus();
+
+        function onSave() {
+          const val = adminKeyPromptInput.value.trim();
+          if (!val) { adminKeyPromptInput.focus(); return; }
+          saveAdminKey(val);
+          adminKeyPromptModal.classList.remove('show');
+          cleanup();
+          resolve(val);
+        }
+        function onCancel() {
+          adminKeyPromptModal.classList.remove('show');
+          cleanup();
+          reject(new Error('Admin key is required to continue.'));
+        }
+        function onKeyPress(e) { if (e.key === 'Enter') onSave(); }
+        function cleanup() {
+          saveAdminKeyPromptBtn.removeEventListener('click', onSave);
+          cancelAdminKeyPromptBtn.removeEventListener('click', onCancel);
+          adminKeyPromptInput.removeEventListener('keypress', onKeyPress);
+        }
+        saveAdminKeyPromptBtn.addEventListener('click', onSave);
+        cancelAdminKeyPromptBtn.addEventListener('click', onCancel);
+        adminKeyPromptInput.addEventListener('keypress', onKeyPress);
+      });
+    }
+
+    function setButtonLoading(button, isLoading, loadingText, defaultText) {
+      button.disabled = isLoading;
+      button.textContent = isLoading ? loadingText : defaultText;
+    }
+
+    function showToast(message, type = 'ok') {
+      const wrap = document.getElementById('toastWrap');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      wrap.appendChild(toast);
+      setTimeout(() => {
+        toast.remove();
+      }, 2600);
+    }
+
+    function getFriendlyErrorMessage(message, statusCode) {
+      const msg = String(message || '').toLowerCase();
+      if (msg.includes('quota') || msg.includes('billing') || msg.includes('insufficient_quota') || statusCode === 402) {
+        return 'Quota exceeded or billing issue. Please upgrade or check your plan.';
+      }
+      if (msg.includes('invalid api key') || msg.includes('invalid admin key') || msg.includes('unauthorized') || statusCode === 401 || statusCode === 403) {
+        return 'Authentication failed. Please check your credentials and try again.';
+      }
+      if (msg.includes('network') || msg.includes('failed to fetch') || statusCode === 503) {
+        return 'Network issue detected. Please try again.';
+      }
+      if (statusCode >= 500) {
+        return 'Something went wrong. Please try again in a moment.';
+      }
+      return 'Request failed. Please try again.';
+    }
+
+    async function parseResponse(response) {
+      const text = await response.text();
+      let data = {};
+      if (text) {
+        try { data = JSON.parse(text); } catch { data = { detail: text }; }
+      }
+      if (!response.ok) {
+        throw new Error(getFriendlyErrorMessage(data.detail || data.message || '', response.status));
+      }
+      return data;
+    }
+
+    function requirePlaygroundKey() {
+      const key = apiKeyInput.value.trim();
+      if (!key) {
+        throw new Error('Enter your API key in the API Keys section first.');
+      }
+      return key;
+    }
+
+    function formatDate(isoString) {
+      if (!isoString) return '—';
+      const date = new Date(isoString);
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function openCreateKeyModal() {
+      keyNameInput.value = '';
+      createKeyModal.classList.add('show');
+      keyNameInput.focus();
+    }
+
+    function closeCreateKeyModal() {
+      createKeyModal.classList.remove('show');
+      keyNameInput.value = '';
+    }
+
+    function openKeyRevealModal(fullKey) {
+      keyRevealValue.value = fullKey || '';
+      revealCopyFeedback.style.display = 'none';
+      keyRevealModal.classList.add('show');
+    }
+
+    function closeKeyRevealModal() {
+      keyRevealModal.classList.remove('show');
+      keyRevealValue.value = '';
+      revealCopyFeedback.style.display = 'none';
+    }
+
+    function openConfirmRevokeModal(keyId) {
+      currentKeyIdToRevoke = keyId;
+      confirmRevokeModal.classList.add('show');
+    }
+
+    function closeConfirmRevokeModal() {
+      confirmRevokeModal.classList.remove('show');
+      currentKeyIdToRevoke = null;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = String(str);
+      return div.innerHTML;
+    }
+
+    function renderKeysTable() {
+      keysTableBody.innerHTML = '';
+
+      if (allKeys.length === 0) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 5;
+        emptyCell.style.cssText = 'padding:20px;text-align:center;color:var(--muted);';
+        emptyCell.textContent = 'No API key yet — create one to start.';
+        emptyRow.appendChild(emptyCell);
+        keysTableBody.appendChild(emptyRow);
+        return;
+      }
+
+      allKeys.forEach(key => {
+        const keyId = String(key.id || '');
+        const keyPrefix = String(key.key_prefix || '');
+
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border)';
+
+        // Name cell
+        const tdName = document.createElement('td');
+        tdName.style.padding = '10px';
+        const strong = document.createElement('strong');
+        strong.textContent = key.name || 'Unnamed';
+        tdName.appendChild(strong);
+
+        // Prefix cell
+        const tdPrefix = document.createElement('td');
+        tdPrefix.style.padding = '10px';
+        const code = document.createElement('code');
+        code.style.cssText = 'background:#09090c;padding:4px 8px;border-radius:6px;color:var(--brand);';
+        code.textContent = keyPrefix;
+        tdPrefix.appendChild(code);
+
+        // Created cell
+        const tdCreated = document.createElement('td');
+        tdCreated.style.padding = '10px';
+        tdCreated.textContent = formatDate(key.created_at);
+
+        // Last used cell
+        const tdLastUsed = document.createElement('td');
+        tdLastUsed.style.padding = '10px';
+        tdLastUsed.textContent = formatDate(key.last_used_at) || '—';
+
+        // Actions cell
+        const tdActions = document.createElement('td');
+        tdActions.style.cssText = 'padding:10px;text-align:right;';
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;gap:6px;justify-content:flex-end;';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'btn btn-secondary';
+        copyBtn.style.cssText = 'padding:6px 10px;font-size:12px;';
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', function() { copyKeyPrefix(keyPrefix, this); });
+
+        const rotateBtn = document.createElement('button');
+        rotateBtn.className = 'btn btn-secondary';
+        rotateBtn.style.cssText = 'padding:6px 10px;font-size:12px;';
+        rotateBtn.textContent = 'Rotate';
+        rotateBtn.addEventListener('click', function() { rotateKey(keyId); });
+
+        const revokeBtn = document.createElement('button');
+        revokeBtn.className = 'btn btn-secondary';
+        revokeBtn.style.cssText = 'padding:6px 10px;font-size:12px;border-color:var(--danger);color:var(--danger);';
+        revokeBtn.textContent = 'Revoke';
+        revokeBtn.addEventListener('click', function() { openConfirmRevokeModal(keyId); });
+
+        actions.appendChild(copyBtn);
+        actions.appendChild(rotateBtn);
+        actions.appendChild(revokeBtn);
+        tdActions.appendChild(actions);
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdPrefix);
+        tr.appendChild(tdCreated);
+        tr.appendChild(tdLastUsed);
+        tr.appendChild(tdActions);
+        keysTableBody.appendChild(tr);
+      });
+    }
+
+    async function fetchAllKeys() {
+      const adminKey = getAdminKey();
+      if (!adminKey) {
+        allKeys = [];
+        renderKeysTable();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/v1/admin/api-keys', {
+          method: 'GET',
+          headers: { 'x-admin-key': adminKey }
+        });
+        const data = await parseResponse(res);
+        allKeys = data.items || data.api_keys || [];
+        renderKeysTable();
+      } catch (error) {
+        setStatus('error', 'Could not load API keys. Please check your admin key.');
+        allKeys = [];
+        renderKeysTable();
+      }
+    }
+
+    function openKeyModal(fullKey) {
+      keyRevealValue.value = fullKey || '';
+      revealCopyFeedback.style.display = 'none';
+      keyRevealModal.classList.add('show');
+    }
+
+    function closeKeyModal() {
+      keyRevealModal.classList.remove('show');
+      keyRevealValue.value = '';
+      revealCopyFeedback.style.display = 'none';
+    }
+
+    async function copyKeyPrefix(prefix, btn) {
+      await navigator.clipboard.writeText(prefix);
+      if (!btn) btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 2000);
+    }
+
+    async function loadDashboard() {
+      const token = getToken();
+      if (!token) {
+        window.location.href = '/ui/login.html';
+        return;
+      }
+
+      setStatus('warn', 'Loading dashboard...');
+
+      try {
+        const meRes = await fetch('/api/v1/me', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        const me = await parseResponse(meRes);
+        currentUser = me;
+
+        const isPaid = me.api_key && me.api_key.is_paid;
+        userLine.textContent = `${me.email} • ${isPaid ? 'Pro' : 'Free'} plan`;
+        planValue.textContent = isPaid ? 'Pro' : 'Free';
+        rateLimitValue.textContent = me.api_key && me.api_key.rate_limit_per_minute ? `${me.api_key.rate_limit_per_minute}/min` : '—';
+
+        const planBanner = document.getElementById('currentPlanBanner');
+        if (isPaid) {
+          planBanner.textContent = '✓ You are on the Pro plan.';
+          planBanner.style.display = 'block';
+        } else if (me.api_key && me.api_key.trial_ends_at) {
+          const trialEnd = new Date(me.api_key.trial_ends_at);
+          const daysLeft = Math.max(0, Math.ceil((trialEnd - Date.now()) / 86400000));
+          planBanner.textContent = daysLeft > 0 ? `Free trial — ${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining.` : 'Trial expired. Upgrade to continue.';
+          planBanner.className = daysLeft > 0 ? 'status warn' : 'status error';
+          planBanner.style.display = 'block';
+        }
+
+        await fetchAllKeys();
+
+        const adminKey = getAdminKey();
+        if (adminKey) {
+          try {
+            const usageRes = await fetch('/api/v1/admin/usage?hours=24', { headers: { 'x-admin-key': adminKey } });
+            const usage = await parseResponse(usageRes);
+            requestsCount.textContent = String(usage.total_requests ?? '—');
+          } catch {
+            requestsCount.textContent = '—';
+          }
+        } else {
+          requestsCount.textContent = '—';
+        }
+
+        loadUsageChart();
+
+        setStatus('ok', 'Dashboard ready.');
+      } catch (error) {
+        if ((error.message || '').toLowerCase().includes('unauthorized') || (error.message || '').toLowerCase().includes('token')) {
+          clearToken();
+          window.location.href = '/ui/login.html';
+          return;
+        }
+        setStatus('error', 'Unable to load dashboard. Please refresh and try again.');
+      }
+    }
+
+    async function createDefaultApiKey() {
+      const token = getToken();
+      if (!token) {
+        window.location.href = '/ui/login.html';
+        return;
+      }
+
+      try {
+        await requireAdminKey();
+      } catch {
+        return;
+      }
+
+      openCreateKeyModal();
+    }
+
+    async function createApiKeyWithName() {
+      const keyName = keyNameInput.value.trim();
+      if (!keyName) {
+        setStatus('error', 'Please enter a key name.');
+        return;
+      }
+
+      let adminKey;
+      try {
+        adminKey = await requireAdminKey();
+      } catch {
+        return;
+      }
+
+      try {
+        setButtonLoading(confirmCreateKeyBtn, true, 'Creating...', 'Create Key');
+        const res = await fetch('/api/v1/admin/api-keys', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-key': adminKey
+          },
+          body: JSON.stringify({ name: keyName })
+        });
+        const data = await parseResponse(res);
+        closeCreateKeyModal();
+        openKeyRevealModal(data.api_key || '');
+        setStatus('ok', 'API key created. Save it now.');
+        showToast('API key created', 'ok');
+        await fetchAllKeys();
+      } catch (error) {
+        setStatus('error', error.message || 'Request failed. Please try again.');
+        showToast(error.message || 'Request failed. Please try again.', 'error');
+      } finally {
+        setButtonLoading(confirmCreateKeyBtn, false, 'Creating...', 'Create Key');
+      }
+    }
+
+    async function rotateKey(keyId) {
+      let adminKey;
+      try {
+        adminKey = await requireAdminKey();
+      } catch {
+        return;
+      }
+
+      try {
+        setStatus('warn', 'Rotating key...');
+        const res = await fetch(`/api/v1/admin/api-keys/${keyId}/rotate`, {
+          method: 'POST',
+          headers: {
+            'x-admin-key': adminKey
+          }
+        });
+        const data = await parseResponse(res);
+        openKeyRevealModal(data.api_key || '');
+        setStatus('ok', 'API key rotated. Save the new key now.');
+        await fetchAllKeys();
+      } catch (error) {
+        setStatus('error', error.message || 'Failed to rotate API key. Please try again.');
+      }
+    }
+
+    async function revokeApiKey() {
+      if (!currentKeyIdToRevoke) {
+        setStatus('error', 'No API key to revoke.');
+        return;
+      }
+
+      let adminKey;
+      try {
+        adminKey = await requireAdminKey();
+      } catch {
+        return;
+      }
+
+      try {
+        closeConfirmRevokeModal();
+        setButtonLoading(confirmRevokeBtn, true, 'Revoking...', 'Revoke');
+        
+        const res = await fetch(`/api/v1/admin/api-keys/${currentKeyIdToRevoke}`, {
+          method: 'DELETE',
+          headers: {
+            'x-admin-key': adminKey
+          }
+        });
+
+        if (!res.ok) {
+          const errorData = await res.text();
+          let error = {};
+          try { error = JSON.parse(errorData); } catch {}
+          throw new Error(error.detail || 'Failed to revoke API key.');
+        }
+
+        setStatus('ok', 'API key revoked successfully.');
+        showToast('API key revoked', 'ok');
+        await fetchAllKeys();
+      } catch (error) {
+        setStatus('error', error.message || 'Request failed. Please try again.');
+        showToast(error.message || 'Request failed. Please try again.', 'error');
+      } finally {
+        setButtonLoading(confirmRevokeBtn, false, 'Revoking...', 'Revoke');
+      }
+    }
+
+    async function verifyPayment(apiKeyId, orderId, paymentId, signature) {
+      const adminKey = getAdminKey();
+      if (!adminKey) throw new Error('Admin key missing for payment verification.');
+
+      const res = await fetch('/api/v1/admin/billing/razorpay/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey
+        },
+        body: JSON.stringify({
+          api_key_id: apiKeyId,
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId,
+          razorpay_signature: signature
+        })
+      });
+
+      const data = await parseResponse(res);
+      if (!data.marked_paid) throw new Error('Payment not marked paid.');
+      return data;
+    }
+
+    async function openBilling() {
+      if (!window.Razorpay) {
+        setStatus('error', 'Payment SDK failed to load.');
+        return;
+      }
+
+      try {
+        const apiKey = requirePlaygroundKey();
+        setButtonLoading(upgradeBtn, true, 'Opening...', 'Upgrade Plan');
+        setButtonLoading(billingBtn, true, 'Opening...', 'Manage Billing');
+
+        const checkoutRes = await fetch('/api/v1/billing/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
+          },
+          body: JSON.stringify({
+            plan_name: 'BrainAPI Pro',
+            customer_name: currentUser && currentUser.name ? currentUser.name : null,
+            customer_email: currentUser && currentUser.email ? currentUser.email : null,
+            customer_phone: null
+          })
+        });
+
+        const checkout = await parseResponse(checkoutRes);
+        setStatus('warn', 'Checkout created. Opening Razorpay...');
+
+        const rz = new window.Razorpay({
+          key: checkout.key_id,
+          amount: checkout.amount_paise,
+          currency: checkout.currency || 'INR',
+          name: 'BrainAPI',
+          description: checkout.plan_name || 'BrainAPI Pro',
+          order_id: checkout.order_id,
+          prefill: {
+            name: (currentUser && currentUser.name) || '',
+            email: (currentUser && currentUser.email) || ''
+          },
+          handler: async (payment) => {
+            try {
+              await verifyPayment(
+                checkout.api_key_id,
+                payment.razorpay_order_id,
+                payment.razorpay_payment_id,
+                payment.razorpay_signature
+              );
+              setStatus('ok', 'Payment successful. Plan upgraded.');
+              await loadDashboard();
+            } catch {
+              setStatus('error', 'Payment succeeded but verification failed.');
+            }
+          }
+        });
+
+        rz.on('payment.failed', (response) => {
+          const description = response && response.error && response.error.description
+            ? response.error.description
+            : 'Payment failed.';
+          setStatus('error', description);
+        });
+
+        rz.open();
+      } catch (error) {
+        setStatus('error', error.message || 'Unable to start checkout.');
+        showToast(error.message || 'Unable to start checkout.', 'error');
+      } finally {
+        setButtonLoading(upgradeBtn, false, 'Opening...', 'Upgrade Plan');
+        setButtonLoading(billingBtn, false, 'Opening...', 'Manage Billing');
+      }
+    }
+
+    async function runText() {
+      setButtonLoading(textBtn, true, 'Generating...', 'Generate');
+      textOut.textContent = 'Loading...';
+      try {
+        const key = requirePlaygroundKey();
+        const prompt = textPrompt.value.trim();
+        if (!prompt) throw new Error('Enter a prompt first.');
+        const res = await fetch('/api/v1/text/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+          body: JSON.stringify({ prompt })
+        });
+        const data = await parseResponse(res);
+        textOut.textContent = data.text || 'No output';
+        setStatus('ok', 'Text generated successfully.');
+      } catch (error) {
+        textOut.textContent = error.message;
+        setStatus('error', error.message);
+      } finally {
+        setButtonLoading(textBtn, false, 'Generating...', 'Generate');
+      }
+    }
+
+    async function runImage() {
+      setButtonLoading(imageBtn, true, 'Generating...', 'Generate');
+      imageOut.textContent = 'Loading...';
+      imagePreview.style.display = 'none';
+      imagePreview.removeAttribute('src');
+      try {
+        const key = requirePlaygroundKey();
+        const prompt = imagePrompt.value.trim();
+        if (!prompt) throw new Error('Enter an image prompt first.');
+        const res = await fetch('/api/v1/image/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+          body: JSON.stringify({ prompt, size: '1024x1024' })
+        });
+        const data = await parseResponse(res);
+
+        if (data.image_url) {
+          imagePreview.src = data.image_url;
+          imagePreview.style.display = 'block';
+        } else if (data.image_b64) {
+          imagePreview.src = 'data:image/png;base64,' + data.image_b64;
+          imagePreview.style.display = 'block';
+        }
+
+        imageOut.textContent = JSON.stringify({ provider: data.provider, model: data.model }, null, 2);
+        setStatus('ok', 'Image generated successfully.');
+      } catch (error) {
+        imageOut.textContent = error.message;
+        setStatus('error', error.message);
+      } finally {
+        setButtonLoading(imageBtn, false, 'Generating...', 'Generate');
+      }
+    }
+
+    async function runSpeech() {
+      setButtonLoading(speechBtn, true, 'Transcribing...', 'Transcribe');
+      speechOut.textContent = 'Loading...';
+      try {
+        const key = requirePlaygroundKey();
+        const file = speechFile.files && speechFile.files[0];
+        if (!file) throw new Error('Select an audio file first.');
+        const form = new FormData();
+        form.append('file', file);
+        const res = await fetch('/api/v1/speech/transcribe', {
+          method: 'POST',
+          headers: { 'x-api-key': key },
+          body: form
+        });
+        const data = await parseResponse(res);
+        speechOut.textContent = data.text || 'No transcription output.';
+        setStatus('ok', 'Speech transcribed successfully.');
+      } catch (error) {
+        speechOut.textContent = error.message;
+        setStatus('error', error.message);
+      } finally {
+        setButtonLoading(speechBtn, false, 'Transcribing...', 'Transcribe');
+      }
+    }
+
+    async function runAutomation() {
+      setButtonLoading(automationBtn, true, 'Running...', 'Run');
+      automationOut.textContent = 'Loading...';
+      try {
+        const key = requirePlaygroundKey();
+        const raw = automationPayload.value.trim();
+        if (!raw) throw new Error('Enter automation JSON first.');
+        let payload = null;
+        try { payload = JSON.parse(raw); } catch { throw new Error('Invalid JSON payload.'); }
+        const res = await fetch('/api/v1/automation/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': key },
+          body: JSON.stringify(payload)
+        });
+        const data = await parseResponse(res);
+        automationOut.textContent = JSON.stringify(data, null, 2);
+        setStatus('ok', 'Automation executed successfully.');
+      } catch (error) {
+        automationOut.textContent = error.message;
+        setStatus('error', error.message);
+      } finally {
+        setButtonLoading(automationBtn, false, 'Running...', 'Run');
+      }
+    }
+
+    // Modal event listeners
+    copyRevealKeyBtn.addEventListener('click', async () => {
+      if (!keyRevealValue.value.trim()) return;
+      await navigator.clipboard.writeText(keyRevealValue.value.trim());
+      revealCopyFeedback.style.display = 'block';
+      setTimeout(() => {
+        revealCopyFeedback.style.display = 'none';
+      }, 2000);
+    });
+    doneRevealKeyBtn.addEventListener('click', closeKeyRevealModal);
+    keyRevealModal.addEventListener('click', (event) => {
+      if (event.target === keyRevealModal) closeKeyRevealModal();
+    });
+
+    newKeyBtn.addEventListener('click', createDefaultApiKey);
+    cancelCreateKeyBtn.addEventListener('click', closeCreateKeyModal);
+    confirmCreateKeyBtn.addEventListener('click', createApiKeyWithName);
+    keyNameInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') createApiKeyWithName();
+    });
+    createKeyModal.addEventListener('click', (event) => {
+      if (event.target === createKeyModal) closeCreateKeyModal();
+    });
+
+    cancelRevokeBtn.addEventListener('click', closeConfirmRevokeModal);
+    confirmRevokeBtn.addEventListener('click', revokeApiKey);
+    confirmRevokeModal.addEventListener('click', (event) => {
+      if (event.target === confirmRevokeModal) closeConfirmRevokeModal();
+    });
+
+    saveAdminKeyBtn.addEventListener('click', () => {
+      const val = adminKeySettingInput.value.trim();
+      if (!val) { adminKeySettingInput.focus(); return; }
+      saveAdminKey(val);
+      adminKeySettingInput.value = '';
+      adminKeySettingInput.placeholder = '••••••••••••••••••••••• (saved)';
+      adminKeyMissingBanner.style.display = 'none';
+      adminKeySavedBanner.style.display = 'block';
+      setTimeout(() => { adminKeySavedBanner.style.display = 'none'; }, 3000);
+    });
+
+    adminKeySettingInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') saveAdminKeyBtn.click();
+    });
+
+    clearAdminKeyBtn.addEventListener('click', () => {
+      clearAdminKey();
+      adminKeySettingInput.value = '';
+      adminKeySettingInput.placeholder = 'Paste your ADMIN_API_KEY from .env';
+      adminKeySavedBanner.style.display = 'none';
+      adminKeyMissingBanner.style.display = 'block';
+    });
+
+    upgradeBtn.addEventListener('click', openBilling);
+    billingBtn.addEventListener('click', openBilling);
+    billingTopBtn.addEventListener('click', openBilling);
+
+    textBtn.addEventListener('click', runText);
+    imageBtn.addEventListener('click', runImage);
+    speechBtn.addEventListener('click', runSpeech);
+    automationBtn.addEventListener('click', runAutomation);
+
+    logoutBtn.addEventListener('click', () => {
+      clearToken();
+      window.location.href = '/';
+    });
+
+    // Mobile sidebar toggle
+    const sidebarEl = document.getElementById('sidebar');
+    document.getElementById('hamburgerBtn').addEventListener('click', () => {
+      sidebarEl.classList.toggle('open');
+    });
+
+    async function loadUsageChart() {
+      const adminKey = getAdminKey();
+      const chartCanvas = document.getElementById('usageChart');
+      const emptyDiv = document.getElementById('usageChartEmpty');
+      const breakdown = document.getElementById('usageBreakdown');
+      const refreshBtn = document.getElementById('refreshUsageBtn');
+      setButtonLoading(refreshBtn, true, 'Loading...', 'Refresh');
+      if (!adminKey) {
+        emptyDiv.style.display = 'flex';
+        setButtonLoading(refreshBtn, false, 'Loading...', 'Refresh');
+        return;
+      }
+      try {
+        const res = await fetch('/api/v1/admin/usage?hours=24', { headers: { 'x-admin-key': adminKey } });
+        const data = await parseResponse(res);
+        const total = data.total_requests ?? 0;
+        const byEndpointArr = data.by_endpoint || [];
+
+        if (total === 0) {
+          emptyDiv.style.display = 'flex';
+          return;
+        }
+        emptyDiv.style.display = 'none';
+
+        const labels = byEndpointArr.map(r => r.endpoint.replace('/api/v1/', ''));
+        const counts = byEndpointArr.map(r => r.count);
+
+        if (usageChartInstance) usageChartInstance.destroy();
+        usageChartInstance = new Chart(chartCanvas, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Requests',
+              data: counts,
+              backgroundColor: 'rgba(0,200,150,0.55)',
+              borderColor: '#00c896',
+              borderWidth: 1,
+              borderRadius: 4,
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { color: '#8b8b95', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+              y: { ticks: { color: '#8b8b95', font: { size: 11 }, stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.04)' } }
+            }
+          }
+        });
+
+        breakdown.innerHTML = '';
+        const topKey = (data.by_key && data.by_key.length > 0) ? data.by_key[0].api_key : '—';
+        [
+          ['Total Requests (24h)', total],
+          ['Top Endpoint', labels[0] || '—'],
+          ['Top Key', topKey.length > 18 ? topKey.slice(0, 18) + '…' : topKey],
+        ].forEach(([label, val]) => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          const labelEl = document.createElement('div');
+          labelEl.className = 'card-label';
+          labelEl.textContent = label;
+          const valEl = document.createElement('div');
+          valEl.className = 'card-value';
+          valEl.style.fontSize = '18px';
+          valEl.textContent = val;
+          card.appendChild(labelEl);
+          card.appendChild(valEl);
+          breakdown.appendChild(card);
+        });
+      } catch {
+        emptyDiv.style.display = 'flex';
+        setStatus('error', 'Could not load usage data.');
+      } finally {
+        setButtonLoading(refreshBtn, false, 'Loading...', 'Refresh');
+      }
+    }
+
+    document.getElementById('refreshUsageBtn').addEventListener('click', loadUsageChart);
+
+    loadSettingsSection();
+    loadDashboard();
+  </script>
+</body>
+</html>

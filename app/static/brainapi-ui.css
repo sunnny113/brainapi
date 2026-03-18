@@ -1,0 +1,87 @@
+/* BrainAPI global style */
+
+body{
+background:
+radial-gradient(circle at 20% 20%, rgba(0,200,150,.18), transparent 40%),
+radial-gradient(circle at 80% 70%, rgba(124,108,242,.18), transparent 40%),
+#050507;
+
+background-attachment:fixed;
+font-family:Inter, sans-serif;
+}
+
+/* neon buttons */
+
+.btn-primary{
+background:linear-gradient(135deg,#00c896,#7c6cf2);
+color:white;
+}
+
+.btn-primary:hover{
+transform:translateY(-2px);
+box-shadow:
+0 0 20px rgba(0,200,150,.6),
+0 0 40px rgba(124,108,242,.4);
+}
+
+/* glass cards */
+
+.feature-tile,
+.pricing-card,
+.console-frame{
+background:rgba(255,255,255,.04);
+border:1px solid rgba(255,255,255,.08);
+backdrop-filter:blur(10px);
+border-radius:16px;
+transition:.25s;
+}
+
+.feature-tile:hover,
+.pricing-card:hover{
+transform:translateY(-6px);
+box-shadow:0 25px 60px rgba(0,0,0,.7);
+}
+
+/* glowing hero text */
+
+.hero-title .grad{
+background:linear-gradient(135deg,#fff,#00c896,#7c6cf2);
+-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;
+}
+.btn-primary{
+background:linear-gradient(135deg,#00c896,#7c6cf2);
+color:white;
+padding:10px 18px;
+border-radius:8px;
+font-weight:600;
+display:inline-block;
+cursor:pointer;
+transition:.25s;
+}
+
+.btn-primary:hover{
+transform:translateY(-2px);
+box-shadow:
+0 0 20px rgba(0,200,150,.6),
+0 0 40px rgba(124,108,242,.4);
+}
+/* dashboard button fix */
+
+#runPrompt{
+background:linear-gradient(135deg,#00c896,#7c6cf2);
+color:white;
+padding:10px 18px;
+border-radius:8px;
+font-weight:600;
+cursor:pointer;
+transition:.25s;
+border:none;
+}
+
+#runPrompt:hover{
+transform:translateY(-2px);
+box-shadow:
+0 0 20px rgba(0,200,150,.6),
+0 0 40px rgba(124,108,242,.4);
+}

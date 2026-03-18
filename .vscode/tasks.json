@@ -1,0 +1,22 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "brainapi-smoke-test",
+			"type": "shell",
+			"command": "powershell",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				".\\smoke-test.ps1",
+				"-BaseUrl",
+				"http://localhost:8000",
+				"-ReportPath",
+				".\\smoke-test-report.json"
+			],
+			"isBackground": false
+		}
+	]
+}

@@ -1,0 +1,48 @@
+name: Email Lifecycle Cron
+
+on:
+  schedule:
+    - cron: "15 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  run-email-jobs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Validate required secrets
+        env:
+          BASE_URL: ${{ secrets.BRAINAPI_BASE_URL }}
+          ADMIN_API_KEY: ${{ secrets.BRAINAPI_ADMIN_API_KEY }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "Missing secret: BRAINAPI_BASE_URL"
+            exit 1
+          fi
+          if [ -z "$ADMIN_API_KEY" ]; then
+            echo "Missing secret: BRAINAPI_ADMIN_API_KEY"
+            exit 1
+          fi
+
+      - name: Schedule trial reminder emails
+        env:
+          BASE_URL: ${{ secrets.BRAINAPI_BASE_URL }}
+          ADMIN_API_KEY: ${{ secrets.BRAINAPI_ADMIN_API_KEY }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            -H "x-admin-key: ${ADMIN_API_KEY}" \
+            "${BASE_URL%/}/api/v1/admin/emails/schedule-trial-reminders"
+
+      - name: Send pending lifecycle emails
+        env:
+          BASE_URL: ${{ secrets.BRAINAPI_BASE_URL }}
+          ADMIN_API_KEY: ${{ secrets.BRAINAPI_ADMIN_API_KEY }}
+          SEND_LIMIT: ${{ secrets.BRAINAPI_EMAIL_SEND_LIMIT }}
+        run: |
+          set -euo pipefail
+          LIMIT="${SEND_LIMIT:-100}"
+          curl -fsS -X POST \
+            -H "x-admin-key: ${ADMIN_API_KEY}" \
+            "${BASE_URL%/}/api/v1/admin/emails/send-pending?limit=${LIMIT}"

@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>BrainAPI Developer Hub</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="brainapi-ui.css">
+
+<style>
+
+body{
+background:#050507;
+color:#e5e7eb;
+font-family:Inter,system-ui;
+}
+
+.code-block{
+position:relative;
+margin-top:10px;
+}
+
+.copy-btn{
+position:absolute;
+right:10px;
+top:10px;
+font-size:12px;
+padding:4px 10px;
+border-radius:6px;
+border:1px solid #374151;
+background:#111827;
+color:#9ca3af;
+cursor:pointer;
+}
+
+.copy-btn:hover{
+color:white;
+border-color:#6b7280;
+}
+
+pre{
+background:#0f172a;
+border:1px solid #1f2937;
+padding:18px;
+border-radius:10px;
+overflow:auto;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="max-w-4xl mx-auto px-6 py-10">
+
+<!-- HEADER -->
+
+<div class="flex justify-between items-center mb-12">
+
+<h1 class="text-2xl font-semibold">
+BrainAPI Developer Hub
+</h1>
+
+<div class="text-sm space-x-6 text-gray-400">
+
+<a href="/" class="hover:text-white">Home</a>
+
+<a href="/ui/dashboard.html" class="hover:text-white">Dashboard</a>
+
+<a href="/docs" class="hover:text-white">Swagger</a>
+
+</div>
+
+</div>
+
+<!-- QUICKSTART -->
+
+<h2 class="text-xl font-semibold mb-2">
+Quickstart
+</h2>
+
+<p class="text-gray-400 mb-6">
+Create an API key and call BrainAPI in under 5 minutes.
+</p>
+
+<div class="code-block">
+
+<button class="copy-btn">Copy</button>
+
+<pre><code>curl -X POST "$BASE_URL/api/v1/public/signup-trial" \
+-H "Content-Type: application/json" \
+-d '{
+ "name":"Demo User",
+ "email":"demo@example.com",
+ "company":"Demo Labs",
+ "use_case":"AI assistant",
+ "source":"website",
+ "consent":true
+}'</code></pre>
+
+</div>
+
+<!-- TEXT -->
+
+<h2 class="text-xl font-semibold mt-12 mb-2">
+Text Generation
+</h2>
+
+<div class="code-block">
+
+<button class="copy-btn">Copy</button>
+
+<pre><code>curl -X POST "$BASE_URL/api/v1/text/generate" \
+-H "x-api-key: YOUR_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+ "prompt":"Write startup launch copy",
+ "temperature":0.6,
+ "max_output_tokens":200
+}'</code></pre>
+
+</div>
+
+<!-- IMAGE -->
+
+<h2 class="text-xl font-semibold mt-12 mb-2">
+Image Generation
+</h2>
+
+<div class="code-block">
+
+<button class="copy-btn">Copy</button>
+
+<pre><code>curl -X POST "$BASE_URL/api/v1/image/generate" \
+-H "x-api-key: YOUR_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+ "prompt":"Modern SaaS dashboard UI",
+ "size":"1024x1024"
+}'</code></pre>
+
+</div>
+
+<!-- PYTHON -->
+
+<h2 class="text-xl font-semibold mt-12 mb-2">
+Python Example
+</h2>
+
+<div class="code-block">
+
+<button class="copy-btn">Copy</button>
+
+<pre><code>import httpx
+
+api_key = "YOUR_API_KEY"
+
+res = httpx.post(
+ "http://localhost:8000/api/v1/text/generate",
+ headers={"x-api-key": api_key},
+ json={"prompt":"Hello world"}
+)
+
+print(res.json())</code></pre>
+
+</div>
+
+<!-- ERRORS -->
+
+<h2 class="text-xl font-semibold mt-12 mb-4">
+Common Errors
+</h2>
+
+<table class="w-full text-sm border border-gray-800 rounded-lg overflow-hidden">
+
+<tr class="bg-gray-900">
+<th class="p-3 text-left">Code</th>
+<th class="p-3 text-left">Meaning</th>
+</tr>
+
+<tr class="border-t border-gray-800">
+<td class="p-3">401</td>
+<td class="p-3">Invalid API key</td>
+</tr>
+
+<tr class="border-t border-gray-800">
+<td class="p-3">402</td>
+<td class="p-3">Trial expired</td>
+</tr>
+
+<tr class="border-t border-gray-800">
+<td class="p-3">429</td>
+<td class="p-3">Rate limit exceeded</td>
+</tr>
+
+<tr class="border-t border-gray-800">
+<td class="p-3">500</td>
+<td class="p-3">Provider error</td>
+</tr>
+
+</table>
+
+</div>
+
+<script>
+
+document.querySelectorAll(".copy-btn").forEach(btn=>{
+
+btn.onclick=()=>{
+
+const code = btn.parentElement.querySelector("code").innerText
+
+navigator.clipboard.writeText(code)
+
+btn.innerText="Copied!"
+
+setTimeout(()=>{
+btn.innerText="Copy"
+},1500)
+
+}
+
+})
+
+</script>
+
+</body>
+</html>
