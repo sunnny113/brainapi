@@ -37,6 +37,9 @@ from .emails import (
     get_lead_contact_for_api_key,
     queue_payment_success_email,
     queue_welcome_email,
+        queue_password_reset_email,
+        queue_invoice_email,
+        send_transactional_email,
     schedule_trial_reminder_emails,
     send_pending_emails,
 )
@@ -390,6 +393,17 @@ def auth_signup(payload: AuthSignupRequest):
         schedule_trial_reminder_emails()
     except Exception as exc:
         logger.warning("Auth signup email queueing failed: %s", exc)
+    try:
+        welcome_evt = queue_welcome_email(
+            name=user["name"],
+            email=user["email"],
+            api_key=signup["api_key"],
+            trial_ends_at=signup["trial_ends_at"],
+        )
+        send_transactional_email(welcome_evt["id"])
+        schedule_trial_reminder_emails()
+    except Exception as exc:
+        logger.warning("Auth signup email failed: %s", exc)
 
     token = create_session_token(user_id=user["id"], email=user["email"])
 
@@ -421,6 +435,16 @@ def auth_request_reset(payload: AuthRequestResetRequest):
     if reset_data is not None and settings.environment != "production":
         response.reset_token = reset_data["token"]
         response.expires_at = reset_data["expires_at"]
+
+    if reset_data is not None:
+        try:
+            evt = queue_password_reset_email(
+                email=payload.email,
+                reset_token=reset_data["token"],
+            )
+            send_transactional_email(evt["id"])
+        except Exception as exc:
+            logger.warning("Password reset email failed: %s", exc)
 
     return response
 
@@ -610,6 +634,16 @@ def public_signup_trial(payload: PublicTrialSignupRequest):
         )
     except Exception as exc:
         logger.warning("Public signup welcome email queue failed: %s", exc)
+    try:
+        welcome_evt = queue_welcome_email(
+            name=result["name"],
+            email=result["email"],
+            api_key=result["api_key"],
+            trial_ends_at=result["trial_ends_at"],
+        )
+        send_transactional_email(welcome_evt["id"])
+    except Exception as exc:
+        logger.warning("Public signup welcome email failed: %s", exc)
 
     return PublicTrialSignupResponse(**result)
 
@@ -820,6 +854,21 @@ def billing_verify_razorpay_payment(payload: RazorpayVerifyPaymentRequest, auth=
                 )
             except Exception as exc:
                 logger.warning("Payment success email queue failed: %s", exc)
+
+            try:
+                plan = payload.plan_name or settings.default_plan_name
+                amount = payload.amount_inr if payload.amount_inr > 0 else settings.default_plan_amount_inr
+                inv_evt = queue_invoice_email(
+                    name=contact["name"],
+                    email=contact["email"],
+                    plan_name=plan,
+                    amount_inr=amount,
+                    razorpay_payment_id=payload.razorpay_payment_id,
+                    razorpay_order_id=payload.razorpay_order_id,
+                )
+                send_transactional_email(inv_evt["id"])
+            except Exception as exc:
+                logger.warning("Invoice email failed: %s", exc)
 
     return RazorpayVerifyPaymentResponse(verified=marked_paid, marked_paid=marked_paid)
 

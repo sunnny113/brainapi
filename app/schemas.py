@@ -73,6 +73,8 @@ class RazorpayVerifyPaymentRequest(BaseModel):
     razorpay_order_id: str = Field(min_length=1)
     razorpay_payment_id: str = Field(min_length=1)
     razorpay_signature: str = Field(min_length=1)
+    plan_name: str = Field(default="BrainAPI Pro", min_length=1, max_length=120)
+    amount_inr: float = Field(default=0.0, ge=0)
 
 
 class RazorpayVerifyPaymentResponse(BaseModel):

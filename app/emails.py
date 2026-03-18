@@ -106,6 +106,80 @@ def queue_payment_success_email(*, name: str | None, email: str, plan_name: str)
     )
 
 
+def queue_password_reset_email(*, email: str, reset_token: str) -> dict:
+    reset_url = f"https://api.brainapi.site/ui/forgot-password.html?token={reset_token}"
+    body = (
+        f"Hi,\n\n"
+        "You requested a password reset for your BrainAPI account.\n\n"
+        "Click the link below to reset your password (valid for 30 minutes):\n"
+        f"{reset_url}\n\n"
+        "If you did not request this, you can safely ignore this email.\n\n"
+        "- BrainAPI\n"
+        "brainapisupport@gmail.com"
+    )
+    return queue_email_event(
+        event_type="password_reset",
+        recipient_email=email,
+        subject="BrainAPI — Reset your password",
+        body_text=body,
+        dedupe_key=f"reset:{_normalize_email(email)}:{reset_token[:8]}",
+    )
+
+
+def queue_invoice_email(
+    *, name: str | None, email: str, plan_name: str, amount_inr: float,
+    razorpay_payment_id: str, razorpay_order_id: str
+) -> dict:
+    from datetime import date
+    display_name = name or "there"
+    invoice_date = date.today().strftime("%d %b %Y")
+    body = (
+        f"Hi {display_name},\n\n"
+        "Thank you for your payment. Here is your invoice:\n\n"
+        f"  Invoice Date : {invoice_date}\n"
+        f"  Plan         : {plan_name}\n"
+        f"  Amount       : \u20b9{amount_inr:.2f} INR\n"
+        f"  Payment ID   : {razorpay_payment_id}\n"
+        f"  Order ID     : {razorpay_order_id}\n\n"
+        "Your BrainAPI subscription is now active.\n"
+        "For any billing questions, reply to this email.\n\n"
+        "- BrainAPI Team\n"
+        "brainapisupport@gmail.com"
+    )
+    return queue_email_event(
+        event_type="invoice",
+        recipient_email=email,
+        subject=f"BrainAPI Invoice \u2014 {plan_name} \u2014 \u20b9{amount_inr:.0f}",
+        body_text=body,
+        dedupe_key=f"invoice:{razorpay_payment_id}",
+    )
+
+
+def send_transactional_email(event_id: int) -> bool:
+    """Try to send a specific queued email immediately. Returns True if sent."""
+    now = _utc_now()
+    with SessionLocal() as db:
+        row = db.get(EmailEvent, event_id)
+        if row is None or row.status != "queued":
+            return False
+        try:
+            _send_smtp_email(
+                recipient_email=row.recipient_email,
+                subject=row.subject,
+                body_text=row.body_text,
+            )
+            row.status = "sent"
+            row.sent_at = now
+            row.error_message = None
+            db.commit()
+            return True
+        except Exception as exc:
+            row.status = "failed"
+            row.error_message = str(exc)[:500]
+            db.commit()
+            return False
+
+
 def schedule_trial_reminder_emails() -> dict:
     now = _utc_now()
     reminder_days = {7, 3, 1, 0}
