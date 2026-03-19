@@ -429,12 +429,15 @@ def auth_request_reset(payload: AuthRequestResetRequest):
     if reset_data is not None:
         try:
             evt = queue_password_reset_email(
-                email=payload.email,
-                reset_token=reset_data["token"],
-            )
+            email=payload.email,
+             reset_token=reset_data["token"],
+          )
+
+            print("EVENT:", evt)  # 👈 ADD THIS
+
             send_transactional_email(evt["id"])
-        except Exception as exc:
-            logger.warning("Password reset email failed: %s", exc)
+        
+        logger.warning("Password reset email failed: %s", exc)
 
     return response
 
