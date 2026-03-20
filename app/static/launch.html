@@ -576,12 +576,12 @@
           <aside class="panel review-form">
             <div class="eyebrow">Leave a review</div>
             <h3 class="feature-title">Tell future users how BrainAPI worked for you</h3>
-            <p class="feature-copy" id="reviewHelper">Sign in to post a review from your real account. New submissions stay pending until approved.</p>
+            <p class="feature-copy" id="reviewHelper">Write your review here. You will need to sign in before the submission is accepted, and every public review stays pending until approved.</p>
             <div id="reviewGuestCta" style="display:grid;gap:10px;">
               <a class="btn btn-primary" href="/ui/login.html">Sign in to review</a>
               <a class="btn btn-secondary" href="/ui/signup.html">Create account</a>
             </div>
-            <form id="reviewForm" style="display:none;">
+            <form id="reviewForm" style="display:grid;">
               <div style="display:grid;grid-template-columns:120px 1fr;gap:12px;">
                 <select id="reviewRating" class="select" required>
                   <option value="5">5/5</option>
@@ -785,10 +785,9 @@
     function setReviewFormState() {
       const token = getSessionToken();
       document.getElementById("reviewGuestCta").style.display = token ? "none" : "grid";
-      document.getElementById("reviewForm").style.display = token ? "grid" : "none";
       document.getElementById("reviewHelper").textContent = token
         ? "You are signed in. Submit a review and it will go live after approval."
-        : "Sign in to post a review from your real account. New submissions stay pending until approved.";
+        : "Write your review here. You will need to sign in before the submission is accepted, and every public review stays pending until approved.";
     }
 
     async function submitReview(event) {
