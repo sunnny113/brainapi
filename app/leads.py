@@ -4,7 +4,9 @@ from sqlalchemy import desc, select
 
 from .auth import create_db_api_key
 from .db import SessionLocal
+from .email_validation import validate_email_address
 from .models import SignupLead
+from .config import settings
 
 
 class SignupError(Exception):
@@ -24,6 +26,9 @@ def create_trial_signup(
     normalized_email = email.strip().lower()
     if not normalized_email:
         raise SignupError("Email is required")
+    validation = validate_email_address(normalized_email, set(settings.blocked_email_domains_list))
+    if not validation.is_valid:
+        raise SignupError(validation.error or "Email is invalid")
 
     now = datetime.now(timezone.utc)
     recent_cutoff = now - timedelta(hours=24)

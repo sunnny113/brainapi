@@ -39,6 +39,18 @@ class TranscriptionResponse(BaseModel):
     provider: str
 
 
+class SendEmailRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=190)
+    subject: str = Field(min_length=1, max_length=255)
+    message: str = Field(min_length=1, max_length=4000)
+
+
+class SendEmailResponse(BaseModel):
+    success: bool
+    message: str
+    error: str | None = None
+
+
 class AdminCreateApiKeyRequest(BaseModel):
     name: str = Field(min_length=1)
     rate_limit_per_minute: int | None = Field(default=None, gt=0)

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
     gemini_text_model: str = "gemini-1.5-flash"
 
+    anthropic_api_key: str = ""
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_text_model: str = "claude-3-5-sonnet-latest"
+
     openai_api_key: str = ""
     openai_text_model: str = "gpt-4.1-mini"
     openai_image_model: str = "gpt-image-1"
@@ -41,8 +45,11 @@ class Settings(BaseSettings):
     api_keys: str = ""
     require_api_key: bool = True
     rate_limit_per_minute: int = 60
+    max_tokens_per_request: int = 4000
+    max_tokens_per_minute: int = 40000
     public_paths: str = "/,/ui,/health,/docs,/openapi.json,/redoc,/robots.txt,/sitemap.xml,/api/v1/billing/razorpay/webhook,/api/v1/public/plans,/api/v1/public/signup-trial,/api/v1/auth/signup,/api/v1/auth/login,/api/v1/auth/request-reset,/api/v1/auth/reset-password"
     admin_api_key: str = ""
+    routing_config_path: str = "brainapi.config.json"
 
     database_url: str = "sqlite:///./brainapi.db"
     auto_create_tables: bool = True
@@ -81,6 +88,8 @@ class Settings(BaseSettings):
     email_from_address: str = ""
     email_from_name: str = "BrainAPI"
     email_reply_to: str = ""
+    blocked_email_domains: str = "example.com,test.com,fake.com"
+    skip_email_in_development: bool = True
     auth_token_secret: str = "dev-brainapi-auth-secret"
     auth_token_secret_previous: str = ""
     password_reset_token_ttl_minutes: int = 30
@@ -120,6 +129,10 @@ class Settings(BaseSettings):
         return self.csv_to_list(self.allowed_audio_file_types)
 
     @property
+    def blocked_email_domains_list(self) -> list[str]:
+        return [item.lower() for item in self.csv_to_list(self.blocked_email_domains)]
+
+    @property
     def normalized_database_url(self) -> str:
         url = (self.database_url or "").strip()
         lower_url = url.lower()
@@ -146,6 +159,8 @@ class Settings(BaseSettings):
             return bool(self.groq_api_key.strip())
         if provider == "gemini":
             return bool(self.gemini_api_key.strip())
+        if provider == "anthropic":
+            return bool(self.anthropic_api_key.strip())
         if provider == "ollama":
             return bool(self.ollama_base_url.strip())
         if provider == "mock":
