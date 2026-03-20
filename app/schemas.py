@@ -39,6 +39,18 @@ class TranscriptionResponse(BaseModel):
     provider: str
 
 
+class SendEmailRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=190)
+    subject: str = Field(min_length=1, max_length=255)
+    message: str = Field(min_length=1, max_length=4000)
+
+
+class SendEmailResponse(BaseModel):
+    success: bool
+    message: str
+    error: str | None = None
+
+
 class AdminCreateApiKeyRequest(BaseModel):
     name: str = Field(min_length=1)
     rate_limit_per_minute: int | None = Field(default=None, gt=0)
@@ -92,8 +104,11 @@ class BillingCheckoutRequest(BaseModel):
 class PublicPlanTier(BaseModel):
     name: str
     price_usd: float
+    price_inr: float
     token_limit: str
     best_for: str
+    cta_label: str | None = None
+    popular: bool = False
 
 
 class PublicPlansResponse(BaseModel):
@@ -102,6 +117,41 @@ class PublicPlansResponse(BaseModel):
     trial_days: int
     includes: list[str]
     plans: list[PublicPlanTier]
+
+
+class ProductReviewItem(BaseModel):
+    id: str
+    display_name: str
+    role: str | None = None
+    rating: int
+    headline: str
+    body_text: str
+    verified_customer: bool = False
+    created_at: datetime
+
+
+class PublicReviewsResponse(BaseModel):
+    items: list[ProductReviewItem]
+    total_reviews: int
+    average_rating: float
+
+
+class SubmitReviewRequest(BaseModel):
+    rating: int = Field(ge=1, le=5)
+    headline: str = Field(min_length=4, max_length=140)
+    body_text: str = Field(min_length=20, max_length=2000)
+    role: str | None = Field(default=None, max_length=120)
+
+
+class SubmitReviewResponse(BaseModel):
+    success: bool = True
+    message: str
+    review_id: str
+    status: str
+
+
+class ReviewModerationRequest(BaseModel):
+    status: Literal["approved", "rejected"]
 
 
 class PublicTrialSignupRequest(BaseModel):
@@ -123,6 +173,9 @@ class PublicTrialSignupResponse(BaseModel):
     trial_ends_at: str | None
     is_paid: bool
     rate_limit_per_minute: int | None
+    dashboard_url: str | None = None
+    quickstart_url: str | None = None
+    support_email: str | None = None
 
 
 class AuthSignupRequest(BaseModel):
@@ -167,6 +220,9 @@ class AuthSignupResponse(AuthLoginResponse):
     api_key: str
     key_prefix: str
     trial_ends_at: datetime | None = None
+    dashboard_url: str | None = None
+    quickstart_url: str | None = None
+    support_email: str | None = None
 
 
 class AuthRequestResetResponse(BaseModel):

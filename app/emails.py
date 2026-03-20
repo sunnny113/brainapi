@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import logging
 import smtplib
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -6,7 +9,12 @@ from sqlalchemy import and_, desc, func, select
 
 from .config import settings
 from .db import SessionLocal
+from .email_validation import normalize_email, validate_email_address
+from .launch import support_email_value
 from .models import APIKey, EmailEvent, SignupLead
+
+
+logger = logging.getLogger("brainapi.email")
 
 
 class EmailError(Exception):
@@ -17,12 +25,37 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _normalize_email(value: str) -> str:
-    return value.strip().lower()
-
-
 def _is_email_configured() -> bool:
     return bool(settings.smtp_host and settings.email_from_address)
+
+
+def _should_skip_delivery() -> bool:
+    environment = (settings.environment or "").strip().lower()
+    return bool(settings.skip_email_in_development and environment in {"development", "dev", "test", "local"})
+
+
+def _email_result(
+    *,
+    success: bool,
+    status: str,
+    message: str,
+    error: str | None = None,
+    event_id: str | None = None,
+    dedupe: bool = False,
+) -> dict:
+    return {
+        "success": success,
+        "status": status,
+        "message": message,
+        "error": error,
+        "id": event_id,
+        "dedupe": dedupe,
+    }
+
+
+def _validate_recipient(recipient_email: str) -> tuple[str | None, str | None]:
+    result = validate_email_address(recipient_email, set(settings.blocked_email_domains_list))
+    return (result.normalized_email, result.error)
 
 
 def queue_email_event(
@@ -34,23 +67,36 @@ def queue_email_event(
     dedupe_key: str | None = None,
     scheduled_for: datetime | None = None,
 ) -> dict:
-    recipient = _normalize_email(recipient_email)
-    if not recipient:
-        raise EmailError("recipient_email is required")
+    normalized_email, validation_error = _validate_recipient(recipient_email)
+    if validation_error or not normalized_email:
+        logger.warning(
+            "email_queue_skipped type=%s recipient=%s reason=%s",
+            event_type,
+            recipient_email,
+            validation_error,
+        )
+        return _email_result(
+            success=False,
+            status="skipped",
+            message="Email skipped.",
+            error=validation_error or "Email is required.",
+        )
 
     with SessionLocal() as db:
         if dedupe_key:
             existing = db.scalar(select(EmailEvent).where(EmailEvent.dedupe_key == dedupe_key))
             if existing is not None:
-                return {
-                    "id": existing.id,
-                    "status": existing.status,
-                    "dedupe": True,
-                }
+                return _email_result(
+                    success=existing.status in {"queued", "sent"},
+                    status=existing.status,
+                    message="Email already queued.",
+                    event_id=existing.id,
+                    dedupe=True,
+                )
 
         row = EmailEvent(
             event_type=event_type,
-            recipient_email=recipient,
+            recipient_email=normalized_email,
             subject=subject,
             body_text=body_text,
             status="queued",
@@ -61,30 +107,44 @@ def queue_email_event(
         db.add(row)
         db.commit()
         db.refresh(row)
-        return {
-            "id": row.id,
-            "status": row.status,
-            "dedupe": False,
-        }
+        return _email_result(
+            success=True,
+            status=row.status,
+            message="Email queued.",
+            event_id=row.id,
+        )
 
 
 def queue_welcome_email(*, name: str, email: str, api_key: str, trial_ends_at: datetime | None) -> dict:
     ends_text = trial_ends_at.isoformat() if trial_ends_at else "N/A"
+    base_url = settings.public_base_url.rstrip("/")
+    quickstart_url = f"{base_url}/ui/quickstart.html"
+    dashboard_url = f"{base_url}/ui/dashboard.html#overview"
+    status_url = f"{base_url}/status"
+    support_email = support_email_value()
     body = (
         f"Hi {name},\n\n"
-        "Welcome to BrainAPI! Your free trial API key is active.\n\n"
+        "Welcome to BrainAPI. Your API key is active and ready to use.\n\n"
         f"API Key: {api_key}\n"
         f"Trial Ends At (UTC): {ends_text}\n\n"
-        "Get started: /docs\n"
-        "If you need help, reply to this email.\n\n"
+        "Start here:\n"
+        f"1. Quickstart docs: {quickstart_url}\n"
+        f"2. Dashboard: {dashboard_url}\n"
+        f"3. Status: {status_url}\n\n"
+        "First request:\n"
+        f"curl -X POST {base_url}/api/v1/ai \\\n"
+        f"  -H \"X-API-Key: {api_key}\" \\\n"
+        "  -H \"Content-Type: application/json\" \\\n"
+        "  -d '{\"type\":\"text\",\"input\":\"Say hello from BrainAPI\",\"mode\":\"cheap\"}'\n\n"
+        f"Need help? Reply to this email or write to {support_email}.\n\n"
         "- BrainAPI"
     )
     return queue_email_event(
         event_type="welcome",
         recipient_email=email,
-        subject="Welcome to BrainAPI - Your Trial API Key",
+        subject="Your BrainAPI API key is ready",
         body_text=body,
-        dedupe_key=f"welcome:{_normalize_email(email)}",
+        dedupe_key=f"welcome:{normalize_email(email)}",
     )
 
 
@@ -102,37 +162,45 @@ def queue_payment_success_email(*, name: str | None, email: str, plan_name: str)
         recipient_email=email,
         subject="BrainAPI Payment Successful",
         body_text=body,
-        dedupe_key=None,
     )
 
 
 def queue_password_reset_email(*, email: str, reset_token: str) -> dict:
     reset_url = f"https://api.brainapi.site/ui/forgot-password.html?token={reset_token}"
+    support_email = support_email_value()
     body = (
-        f"Hi,\n\n"
+        "Hi,\n\n"
         "You requested a password reset for your BrainAPI account.\n\n"
         "Click the link below to reset your password (valid for 30 minutes):\n"
         f"{reset_url}\n\n"
         "If you did not request this, you can safely ignore this email.\n\n"
         "- BrainAPI\n"
-        "brainapisupport@gmail.com"
+        f"{support_email}"
     )
+    normalized = normalize_email(email)
     return queue_email_event(
         event_type="password_reset",
-        recipient_email=email,
-        subject="BrainAPI — Reset your password",
+        recipient_email=normalized,
+        subject="BrainAPI - Reset your password",
         body_text=body,
-        dedupe_key=f"reset:{_normalize_email(email)}:{reset_token[:8]}",
+        dedupe_key=f"reset:{normalized}:{reset_token[:8]}",
     )
 
 
 def queue_invoice_email(
-    *, name: str | None, email: str, plan_name: str, amount_inr: float,
-    razorpay_payment_id: str, razorpay_order_id: str
+    *,
+    name: str | None,
+    email: str,
+    plan_name: str,
+    amount_inr: float,
+    razorpay_payment_id: str,
+    razorpay_order_id: str,
 ) -> dict:
     from datetime import date
+
     display_name = name or "there"
     invoice_date = date.today().strftime("%d %b %Y")
+    support_email = support_email_value()
     body = (
         f"Hi {display_name},\n\n"
         "Thank you for your payment. Here is your invoice:\n\n"
@@ -144,40 +212,126 @@ def queue_invoice_email(
         "Your BrainAPI subscription is now active.\n"
         "For any billing questions, reply to this email.\n\n"
         "- BrainAPI Team\n"
-        "brainapisupport@gmail.com"
+        f"{support_email}"
     )
     return queue_email_event(
         event_type="invoice",
         recipient_email=email,
-        subject=f"BrainAPI Invoice \u2014 {plan_name} \u2014 \u20b9{amount_inr:.0f}",
+        subject=f"BrainAPI Invoice - {plan_name} - \u20b9{amount_inr:.0f}",
         body_text=body,
         dedupe_key=f"invoice:{razorpay_payment_id}",
     )
 
 
-def send_transactional_email(event_id: int) -> bool:
-    """Try to send a specific queued email immediately. Returns True if sent."""
+def _send_smtp_email(*, recipient_email: str, subject: str, body_text: str) -> None:
+    if not _is_email_configured():
+        raise EmailError("SMTP is not configured. Set SMTP_HOST and EMAIL_FROM_ADDRESS")
+
+    message = EmailMessage()
+    message["From"] = f"{settings.email_from_name} <{settings.email_from_address}>"
+    message["To"] = recipient_email
+    message["Subject"] = subject
+    if settings.email_reply_to:
+        message["Reply-To"] = settings.email_reply_to
+    message.set_content(body_text)
+
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
+        if settings.smtp_use_tls:
+            server.starttls()
+        if settings.smtp_username:
+            server.login(settings.smtp_username, settings.smtp_password)
+        server.send_message(message)
+
+
+def _deliver_email(*, recipient_email: str, subject: str, body_text: str) -> dict:
+    normalized_email, validation_error = _validate_recipient(recipient_email)
+    if validation_error or not normalized_email:
+        return _email_result(
+            success=False,
+            status="skipped",
+            message="Email skipped.",
+            error=validation_error or "Email is required.",
+        )
+
+    if _should_skip_delivery():
+        logger.info("email_delivery_skipped recipient=%s reason=development_mode", normalized_email)
+        return _email_result(
+            success=False,
+            status="skipped",
+            message="Email skipped in development mode.",
+        )
+
+    if not _is_email_configured():
+        return _email_result(
+            success=False,
+            status="failed",
+            message="Email failed.",
+            error="SMTP is not configured.",
+        )
+
+    try:
+        _send_smtp_email(
+            recipient_email=normalized_email,
+            subject=subject,
+            body_text=body_text,
+        )
+        logger.info("email_sent recipient=%s subject=%s", normalized_email, subject)
+        return _email_result(
+            success=True,
+            status="sent",
+            message="Email sent.",
+        )
+    except Exception as exc:
+        logger.exception("email_delivery_failed recipient=%s error=%s", normalized_email, exc)
+        return _email_result(
+            success=False,
+            status="failed",
+            message="Email failed.",
+            error=str(exc)[:500],
+        )
+
+
+def send_transactional_email(event_id: str | None) -> dict:
+    """Try to send a specific queued email immediately."""
+    if not event_id:
+        return _email_result(
+            success=False,
+            status="skipped",
+            message="Email skipped.",
+            error="Queued email event is missing.",
+        )
+
     now = _utc_now()
     with SessionLocal() as db:
         row = db.get(EmailEvent, event_id)
-        if row is None or row.status != "queued":
-            return False
-        try:
-            _send_smtp_email(
-                recipient_email=row.recipient_email,
-                subject=row.subject,
-                body_text=row.body_text,
+        if row is None:
+            return _email_result(
+                success=False,
+                status="skipped",
+                message="Email skipped.",
+                error="Queued email event not found.",
             )
-            row.status = "sent"
-            row.sent_at = now
-            row.error_message = None
-            db.commit()
-            return True
-        except Exception as exc:
-            row.status = "failed"
-            row.error_message = str(exc)[:500]
-            db.commit()
-            return False
+        if row.status != "queued":
+            return _email_result(
+                success=row.status == "sent",
+                status=row.status,
+                message=f"Email {row.status}.",
+                error=row.error_message,
+                event_id=row.id,
+            )
+
+        result = _deliver_email(
+            recipient_email=row.recipient_email,
+            subject=row.subject,
+            body_text=row.body_text,
+        )
+        row.status = result["status"]
+        row.error_message = (result.get("error") or "")[:500] or None
+        row.sent_at = now if result["status"] == "sent" else None
+        db.commit()
+
+        result["id"] = row.id
+        return result
 
 
 def schedule_trial_reminder_emails() -> dict:
@@ -198,6 +352,17 @@ def schedule_trial_reminder_emails() -> dict:
 
         for lead, key in rows:
             if not lead.email or not key.trial_ends_at:
+                skipped += 1
+                continue
+
+            normalized_email, validation_error = _validate_recipient(lead.email)
+            if validation_error or not normalized_email:
+                logger.warning(
+                    "trial_email_skipped lead_id=%s recipient=%s reason=%s",
+                    lead.id,
+                    lead.email,
+                    validation_error,
+                )
                 skipped += 1
                 continue
 
@@ -236,7 +401,7 @@ def schedule_trial_reminder_emails() -> dict:
 
             event = EmailEvent(
                 event_type=event_type,
-                recipient_email=_normalize_email(lead.email),
+                recipient_email=normalized_email,
                 subject=subject,
                 body_text=body,
                 status="queued",
@@ -255,26 +420,6 @@ def schedule_trial_reminder_emails() -> dict:
     }
 
 
-def _send_smtp_email(*, recipient_email: str, subject: str, body_text: str) -> None:
-    if not _is_email_configured():
-        raise EmailError("SMTP is not configured. Set SMTP_HOST and EMAIL_FROM_ADDRESS")
-
-    message = EmailMessage()
-    message["From"] = f"{settings.email_from_name} <{settings.email_from_address}>"
-    message["To"] = recipient_email
-    message["Subject"] = subject
-    if settings.email_reply_to:
-        message["Reply-To"] = settings.email_reply_to
-    message.set_content(body_text)
-
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=30) as server:
-        if settings.smtp_use_tls:
-            server.starttls()
-        if settings.smtp_username:
-            server.login(settings.smtp_username, settings.smtp_password)
-        server.send_message(message)
-
-
 def send_pending_emails(limit: int = 50) -> dict:
     if limit < 1:
         limit = 1
@@ -284,33 +429,32 @@ def send_pending_emails(limit: int = 50) -> dict:
     now = _utc_now()
     sent = 0
     failed = 0
+    skipped = 0
 
     with SessionLocal() as db:
         pending_rows = db.scalars(
             select(EmailEvent)
             .where(EmailEvent.status == "queued")
-            .where(
-                (EmailEvent.scheduled_for.is_(None))
-                | (EmailEvent.scheduled_for <= now)
-            )
+            .where((EmailEvent.scheduled_for.is_(None)) | (EmailEvent.scheduled_for <= now))
             .order_by(func.coalesce(EmailEvent.scheduled_for, EmailEvent.created_at), desc(EmailEvent.created_at))
             .limit(limit)
         ).all()
 
         for row in pending_rows:
-            try:
-                _send_smtp_email(
-                    recipient_email=row.recipient_email,
-                    subject=row.subject,
-                    body_text=row.body_text,
-                )
-                row.status = "sent"
-                row.sent_at = now
-                row.error_message = None
+            result = _deliver_email(
+                recipient_email=row.recipient_email,
+                subject=row.subject,
+                body_text=row.body_text,
+            )
+            row.status = result["status"]
+            row.error_message = (result.get("error") or "")[:500] or None
+            row.sent_at = now if result["status"] == "sent" else None
+
+            if result["status"] == "sent":
                 sent += 1
-            except Exception as exc:
-                row.status = "failed"
-                row.error_message = str(exc)[:500]
+            elif result["status"] == "skipped":
+                skipped += 1
+            else:
                 failed += 1
 
         db.commit()
@@ -319,7 +463,20 @@ def send_pending_emails(limit: int = 50) -> dict:
         "attempted": len(pending_rows),
         "sent": sent,
         "failed": failed,
+        "skipped": skipped,
     }
+
+
+def send_custom_email(*, recipient_email: str, subject: str, body_text: str) -> dict:
+    event = queue_email_event(
+        event_type="custom",
+        recipient_email=recipient_email,
+        subject=subject,
+        body_text=body_text,
+    )
+    if not event.get("id"):
+        return event
+    return send_transactional_email(event["id"])
 
 
 def get_lead_contact_for_api_key(api_key_id: str) -> dict | None:

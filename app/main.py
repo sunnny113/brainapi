@@ -1,3 +1,4 @@
+import base64
 import hmac
 import logging
 import time
@@ -14,6 +15,7 @@ from redis.exceptions import RedisError
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .auth import (
+    AuthIdentity,
     authenticate_user,
     create_db_api_key,
     create_password_reset_token,
@@ -30,21 +32,29 @@ from .auth import (
     verify_session_token,
     verify_user_api_key,
 )
+from .ai_gateway.costing import estimate_tokens_from_text
+from .ai_gateway.gateway import get_gateway
+from .ai_gateway.limits import InMemoryTokenRateLimiter, RedisTokenRateLimiter
+from .ai_gateway.router import RoutingError
+from .ai_gateway.types import UnifiedAIRequest, UnifiedAIResponse
 from .billing import BillingError, create_razorpay_order, handle_razorpay_webhook, verify_and_mark_paid
 from .config import settings
 from .db import init_db
 from .emails import (
     get_lead_contact_for_api_key,
+    queue_invoice_email,
+    queue_password_reset_email,
     queue_payment_success_email,
     queue_welcome_email,
-        queue_password_reset_email,
-        queue_invoice_email,
-        send_transactional_email,
+    send_custom_email,
+    send_transactional_email,
     schedule_trial_reminder_emails,
     send_pending_emails,
 )
+from .launch import launch_metrics_summary, public_status_payload, support_email_value
 from .leads import SignupError, create_trial_signup
 from .metering import per_key_usage_summary, record_usage_event, usage_summary
+from .reviews import list_admin_reviews, list_public_reviews, moderate_review, submit_product_review
 from .schemas import (
     AdminCreateApiKeyRequest,
     AdminCreateRazorpayOrderRequest,
@@ -63,18 +73,24 @@ from .schemas import (
     ImageGenerateRequest,
     ImageGenerateResponse,
     PublicPlansResponse,
+    PublicReviewsResponse,
     PublicTrialSignupRequest,
     PublicTrialSignupResponse,
     RazorpayOrderResponse,
     RazorpayVerifyPaymentRequest,
     RazorpayVerifyPaymentResponse,
+    ReviewModerationRequest,
+    SendEmailRequest,
+    SendEmailResponse,
     StepResult,
+    SubmitReviewRequest,
+    SubmitReviewResponse,
     TextGenerateRequest,
     TextGenerateResponse,
     TranscriptionResponse,
 )
 from .security import InMemoryRateLimiter, RedisRateLimiter, extract_api_key_from_request, require_api_key
-from .services import generate_image, generate_text, run_automation_steps, transcribe_audio
+from .services import run_automation_steps
 
 app = FastAPI(
     title="BrainAPI",
@@ -93,12 +109,37 @@ if static_dir.exists():
 
 in_memory_rate_limiter = InMemoryRateLimiter(max_requests=settings.rate_limit_per_minute)
 redis_rate_limiter = RedisRateLimiter(settings.redis_url) if settings.redis_url else None
+in_memory_token_rate_limiter = InMemoryTokenRateLimiter()
+redis_token_rate_limiter = RedisTokenRateLimiter(settings.redis_url) if settings.redis_url else None
 
 PUBLIC_PLAN_CATALOG = [
-    {"name": "Free", "price_usd": 0, "amount_inr": 0, "token_limit": "50k tokens/month", "best_for": "testing"},
-    {"name": "Starter", "price_usd": 4, "amount_inr": 349, "token_limit": "1M tokens", "best_for": "developers"},
-    {"name": "Pro", "price_usd": 9, "amount_inr": 799, "token_limit": "3M tokens", "best_for": "startups"},
-    {"name": "Business", "price_usd": 19, "amount_inr": 1699, "token_limit": "10M tokens", "best_for": "SaaS apps"},
+    {
+        "name": "Free",
+        "price_usd": 0,
+        "amount_inr": 0,
+        "token_limit": "50k tokens/month",
+        "best_for": "testing and side projects",
+        "cta_label": "Get API Key",
+        "popular": False,
+    },
+    {
+        "name": "Starter",
+        "price_usd": 6,
+        "amount_inr": 499,
+        "token_limit": "1M tokens/month",
+        "best_for": "indie hackers",
+        "cta_label": "Start for Rs499",
+        "popular": True,
+    },
+    {
+        "name": "Pro",
+        "price_usd": 12,
+        "amount_inr": 999,
+        "token_limit": "3M tokens/month",
+        "best_for": "shipping SaaS apps",
+        "cta_label": "Upgrade to Pro",
+        "popular": False,
+    },
 ]
 
 
@@ -111,6 +152,87 @@ def _provider_exception_status_code(exc: Exception) -> int:
         return status_code
 
     return 500
+
+
+def _estimate_text_request_tokens(prompt: str, max_output_tokens: int | None) -> int:
+    return estimate_tokens_from_text(prompt) + int(max_output_tokens or 0)
+
+
+def _extract_image_parts(output: str) -> tuple[str | None, str | None]:
+    if output.startswith("data:image/") and "," in output:
+        _, _, encoded = output.partition(",")
+        return (None, encoded or None)
+    return (output or None, None)
+
+
+async def _enforce_ai_token_limits(auth: AuthIdentity, estimated_tokens: int) -> None:
+    if estimated_tokens <= 0:
+        return
+
+    if estimated_tokens > settings.max_tokens_per_request:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Request exceeds max token budget of {settings.max_tokens_per_request} tokens.",
+        )
+
+    if settings.max_tokens_per_minute <= 0:
+        return
+
+    try:
+        if redis_token_rate_limiter:
+            decision = await redis_token_rate_limiter.is_allowed(
+                key=auth.key_label,
+                tokens=estimated_tokens,
+                max_tokens_per_minute=settings.max_tokens_per_minute,
+            )
+        else:
+            decision = in_memory_token_rate_limiter.is_allowed(
+                key=auth.key_label,
+                tokens=estimated_tokens,
+                max_tokens_per_minute=settings.max_tokens_per_minute,
+            )
+    except Exception as exc:
+        logger.warning("Token limiter failed; falling back to in-memory: %s", exc)
+        decision = in_memory_token_rate_limiter.is_allowed(
+            key=auth.key_label,
+            tokens=estimated_tokens,
+            max_tokens_per_minute=settings.max_tokens_per_minute,
+        )
+
+    if not decision.allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Token rate limit exceeded. Try again in {decision.retry_after_seconds} seconds.",
+            headers={"Retry-After": str(decision.retry_after_seconds)},
+        )
+
+
+def _handle_ai_gateway_request(payload: UnifiedAIRequest) -> UnifiedAIResponse:
+    try:
+        provider_response, fallback_used = get_gateway().handle(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RoutingError as exc:
+        raise HTTPException(
+            status_code=_provider_exception_status_code(exc),
+            detail="AI request failed. Please try again later.",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=_provider_exception_status_code(exc),
+            detail="AI request failed. Please try again later.",
+        ) from exc
+
+    return UnifiedAIResponse(
+        success=True,
+        output=provider_response.output,
+        provider=provider_response.provider,
+        tokens_used=provider_response.tokens_used,
+        cost_estimate=provider_response.cost_estimate,
+        model=provider_response.model,
+        latency_ms=provider_response.latency_ms,
+        fallback_used=fallback_used,
+    )
 
 
 def _utc_now() -> datetime:
@@ -311,7 +433,12 @@ from fastapi.responses import FileResponse
 
 @app.get("/")
 def web_ui():
-    return FileResponse("app/static/index.html")
+    return FileResponse("app/static/launch.html")
+
+
+@app.get("/status")
+def public_status_page():
+    return FileResponse("app/static/status.html")
 
 
 @app.get("/favicon.ico")
@@ -340,6 +467,16 @@ def health_check():
     }
 
 
+@app.get("/api/v1/public/status")
+def public_status():
+    return public_status_payload()
+
+
+@app.get("/api/v1/public/reviews", response_model=PublicReviewsResponse)
+def public_reviews(limit: int = Query(default=6, ge=1, le=20)):
+    return PublicReviewsResponse(**list_public_reviews(limit=limit))
+
+
 @app.get("/api/v1/metrics")
 def metrics(request: Request):
     return {
@@ -348,7 +485,30 @@ def metrics(request: Request):
         "provider_ready": settings.provider_ready,
         "usage_metering_enabled": settings.enable_usage_metering,
         "redis_rate_limiter_enabled": bool(settings.redis_url),
+        "support_email": support_email_value(),
     }
+
+
+@app.post("/send-email", response_model=SendEmailResponse)
+def send_email(payload: SendEmailRequest, auth=Depends(require_api_key)):
+    try:
+        result = send_custom_email(
+            recipient_email=payload.email,
+            subject=payload.subject,
+            body_text=payload.message,
+        )
+        return SendEmailResponse(
+            success=bool(result.get("success")),
+            message=str(result.get("message") or "Email failed."),
+            error=result.get("error"),
+        )
+    except Exception as exc:
+        logger.error("Direct email send failed for %s: %s", auth.key_label, exc, exc_info=True)
+        return SendEmailResponse(
+            success=False,
+            message="Email failed.",
+            error="Unexpected email delivery failure.",
+        )
 
 
 @app.post("/api/v1/auth/signup", response_model=AuthSignupResponse)
@@ -384,23 +544,14 @@ def auth_signup(payload: AuthSignupRequest):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
     try:
-        queue_welcome_email(
-            name=user["name"],
-            email=user["email"],
-            api_key=signup["api_key"],
-            trial_ends_at=signup["trial_ends_at"],
-        )
-        schedule_trial_reminder_emails()
-    except Exception as exc:
-        logger.warning("Auth signup email queueing failed: %s", exc)
-    try:
         welcome_evt = queue_welcome_email(
             name=user["name"],
             email=user["email"],
             api_key=signup["api_key"],
             trial_ends_at=signup["trial_ends_at"],
         )
-        send_transactional_email(welcome_evt["id"])
+        if welcome_evt.get("id"):
+            send_transactional_email(welcome_evt["id"])
         schedule_trial_reminder_emails()
     except Exception as exc:
         logger.warning("Auth signup email failed: %s", exc)
@@ -414,6 +565,9 @@ def auth_signup(payload: AuthSignupRequest):
         api_key=signup["api_key"],
         key_prefix=signup["key_prefix"],
         trial_ends_at=signup["trial_ends_at"],
+        dashboard_url="/ui/dashboard.html#overview",
+        quickstart_url="/ui/onboarding.html",
+        support_email=support_email_value(),
     )
 
 
@@ -438,11 +592,13 @@ def auth_request_reset(payload: AuthRequestResetRequest):
 
     if reset_data is not None:
         try:
+            recipient_email = str(reset_data["user"]["email"])
             evt = queue_password_reset_email(
-                email=payload.email,
+                email=recipient_email,
                 reset_token=reset_data["token"],
             )
-            send_transactional_email(evt["id"])
+            if evt.get("id"):
+                send_transactional_email(evt["id"])
         except Exception as exc:
             logger.warning("Password reset email failed: %s", exc)
 
@@ -487,6 +643,26 @@ def _require_session(request: Request) -> dict:
     
     # Payload contains: {sub: user_id, email, iat, exp, typ: "session"}
     return payload
+
+
+@app.post("/api/v1/reviews", response_model=SubmitReviewResponse)
+def submit_review(payload: SubmitReviewRequest, session: dict = Depends(_require_session)):
+    try:
+        result = submit_product_review(
+            user_id=str(session.get("sub") or ""),
+            rating=payload.rating,
+            headline=payload.headline,
+            body_text=payload.body_text,
+            role=payload.role,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    return SubmitReviewResponse(
+        message=result["message"],
+        review_id=result["id"],
+        status=result["status"],
+    )
 
 
 @app.get("/api/v1/me")
@@ -594,13 +770,16 @@ def public_plans():
         plan_name=settings.default_plan_name,
         amount_inr=settings.default_plan_amount_inr,
         trial_days=settings.trial_default_days,
-        includes=["Text", "Image", "Speech", "Automation"],
+        includes=["Unified AI endpoint", "Instant API key", "Usage analytics", "Email onboarding"],
         plans=[
             {
                 "name": item["name"],
                 "price_usd": float(item["price_usd"]),
+                "price_inr": float(item["amount_inr"]),
                 "token_limit": item["token_limit"],
                 "best_for": item["best_for"],
+                "cta_label": item.get("cta_label"),
+                "popular": bool(item.get("popular")),
             }
             for item in PUBLIC_PLAN_CATALOG
         ],
@@ -626,26 +805,23 @@ def public_signup_trial(payload: PublicTrialSignupRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
     try:
-        queue_welcome_email(
-            name=result["name"],
-            email=result["email"],
-            api_key=result["api_key"],
-            trial_ends_at=result["trial_ends_at"],
-        )
-    except Exception as exc:
-        logger.warning("Public signup welcome email queue failed: %s", exc)
-    try:
         welcome_evt = queue_welcome_email(
             name=result["name"],
             email=result["email"],
             api_key=result["api_key"],
             trial_ends_at=result["trial_ends_at"],
         )
-        send_transactional_email(welcome_evt["id"])
+        if welcome_evt.get("id"):
+            send_transactional_email(welcome_evt["id"])
     except Exception as exc:
         logger.warning("Public signup welcome email failed: %s", exc)
 
-    return PublicTrialSignupResponse(**result)
+    return PublicTrialSignupResponse(
+        **result,
+        dashboard_url="/ui/dashboard.html#overview",
+        quickstart_url="/ui/onboarding.html",
+        support_email=support_email_value(),
+    )
 
 
 @app.post("/api/v1/admin/api-keys")
@@ -712,6 +888,35 @@ def admin_update_api_key_billing(key_id: str, payload: AdminUpdateApiKeyBillingR
 def admin_usage_summary(request: Request, hours: int = Query(default=24, ge=1, le=24 * 30)):
     require_admin(request)
     return usage_summary(hours=hours)
+
+
+@app.get("/api/v1/admin/launch-metrics")
+def admin_launch_metrics(request: Request, days: int = Query(default=30, ge=1, le=365)):
+    require_admin(request)
+    return launch_metrics_summary(days=days)
+
+
+@app.get("/api/v1/admin/reviews")
+def admin_reviews(request: Request, status: str = Query(default="pending"), limit: int = Query(default=50, ge=1, le=200)):
+    require_admin(request)
+    try:
+        return list_admin_reviews(status=status, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+
+@app.patch("/api/v1/admin/reviews/{review_id}")
+def admin_update_review(review_id: str, payload: ReviewModerationRequest, request: Request):
+    require_admin(request)
+    try:
+        result = moderate_review(review_id=review_id, status=payload.status)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review not found")
+
+    return result
 
 
 @app.post("/api/v1/admin/emails/schedule-trial-reminders")
@@ -866,28 +1071,68 @@ def billing_verify_razorpay_payment(payload: RazorpayVerifyPaymentRequest, auth=
                     razorpay_payment_id=payload.razorpay_payment_id,
                     razorpay_order_id=payload.razorpay_order_id,
                 )
-                send_transactional_email(inv_evt["id"])
+                if inv_evt.get("id"):
+                    send_transactional_email(inv_evt["id"])
             except Exception as exc:
                 logger.warning("Invoice email failed: %s", exc)
 
     return RazorpayVerifyPaymentResponse(verified=marked_paid, marked_paid=marked_paid)
 
 
-@app.post("/api/v1/text/generate", response_model=TextGenerateResponse)
-def text_generate(request: Request, payload: TextGenerateRequest, auth=Depends(require_api_key)):
+@app.post("/api/v1/ai", response_model=UnifiedAIResponse)
+async def unified_ai(request: Request, payload: UnifiedAIRequest, auth=Depends(require_api_key)):
     try:
-        text, model, provider = generate_text(
-            prompt=payload.prompt,
-            temperature=payload.temperature,
-            max_output_tokens=payload.max_output_tokens,
+        if payload.type == "text":
+            await _enforce_ai_token_limits(
+                auth,
+                _estimate_text_request_tokens(payload.input, payload.max_output_tokens),
+            )
+
+        response = _handle_ai_gateway_request(payload)
+        logger.info(
+            "unified_ai request_id=%s provider=%s fallback=%s tokens=%s latency_ms=%s",
+            getattr(request.state, "request_id", None),
+            response.provider,
+            response.fallback_used,
+            response.tokens_used,
+            response.latency_ms,
+        )
+        return response
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error("Unified AI request error for %s: %s", auth.key_label, exc, exc_info=True)
+        raise HTTPException(
+            status_code=_provider_exception_status_code(exc),
+            detail="AI request failed. Please try again later.",
+        )
+
+
+@app.post("/api/v1/text/generate", response_model=TextGenerateResponse)
+async def text_generate(request: Request, payload: TextGenerateRequest, auth=Depends(require_api_key)):
+    try:
+        await _enforce_ai_token_limits(
+            auth,
+            _estimate_text_request_tokens(payload.prompt, payload.max_output_tokens),
+        )
+
+        response = _handle_ai_gateway_request(
+            UnifiedAIRequest(
+                type="text",
+                input=payload.prompt,
+                temperature=payload.temperature,
+                max_output_tokens=payload.max_output_tokens,
+            )
         )
 
         return TextGenerateResponse(
-            text=text,
-            model=model,
-            provider=provider,
+            text=response.output,
+            model=response.model or "unknown",
+            provider=response.provider,
             request_id=request.state.request_id,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Text generation error for %s: %s", auth.key_label, exc, exc_info=True)
         raise HTTPException(
@@ -897,19 +1142,25 @@ def text_generate(request: Request, payload: TextGenerateRequest, auth=Depends(r
 
 
 @app.post("/api/v1/image/generate", response_model=ImageGenerateResponse)
-def image_generate(request: Request, payload: ImageGenerateRequest, auth=Depends(require_api_key)):
+async def image_generate(request: Request, payload: ImageGenerateRequest, auth=Depends(require_api_key)):
     try:
-        image_url, image_b64, model, provider = generate_image(
-            prompt=payload.prompt,
-            size=payload.size,
+        response = _handle_ai_gateway_request(
+            UnifiedAIRequest(
+                type="image",
+                input=payload.prompt,
+                size=payload.size,
+            )
         )
+        image_url, image_b64 = _extract_image_parts(response.output)
 
         return ImageGenerateResponse(
             image_url=image_url,
             image_b64=image_b64,
-            model=model,
-            provider=provider,
+            model=response.model or "unknown",
+            provider=response.provider,
         )
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.error("Image generation error for %s: %s", auth.key_label, exc, exc_info=True)
         raise HTTPException(
@@ -938,16 +1189,20 @@ async def speech_transcribe(request: Request, file: UploadFile = File(...), auth
                 detail=f"File too large. Maximum size: {settings.max_upload_file_size_mb}MB, got {file_size / (1024 * 1024):.2f}MB",
             )
 
-        text, model, provider = transcribe_audio(
-            file_obj=file.file,
-            filename=file.filename,
-            content_type=file.content_type,
+        audio_bytes = await file.read()
+        response = _handle_ai_gateway_request(
+            UnifiedAIRequest(
+                type="audio",
+                input=base64.b64encode(audio_bytes).decode("ascii"),
+                audio_filename=file.filename or "audio",
+                audio_content_type=file.content_type,
+            )
         )
 
         return TranscriptionResponse(
-            text=text,
-            model=model,
-            provider=provider,
+            text=response.output,
+            model=response.model or "unknown",
+            provider=response.provider,
         )
     except HTTPException:
         raise
@@ -1002,7 +1257,7 @@ def robots_txt():
 @app.get("/sitemap.xml")
 def sitemap_xml():
     base = settings.public_base_url.rstrip("/")
-    urls = ["/", "/ui/index.html", "/ui/login.html", "/ui/signup.html", "/ui/developer.html"]
+    urls = ["/", "/status", "/ui/quickstart.html", "/ui/login.html", "/ui/signup.html"]
     xml_entries = "\n".join(
         f"  <url><loc>{base}{u}</loc><changefreq>weekly</changefreq></url>"
         for u in urls

@@ -229,42 +229,49 @@
 
     <!-- REVIEWS -->
     <section id="reviews" style="padding:40px 0 16px;">
-      <h2 style="font-size:22px;font-weight:700;text-align:center;margin-bottom:8px;">What developers are saying</h2>
-      <p class="muted" style="text-align:center;font-size:15px;margin-bottom:28px;">Trusted by indie devs, startups, and teams shipping AI features.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
-        <div class="panel" style="padding:20px;">
-          <div style="display:flex;gap:2px;margin-bottom:12px;color:#f5a623;">★★★★★</div>
-          <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#d7d7dc;">"BrainAPI saved us weeks of integration work. One API key for text, image, and audio — it just works. The dashboard is clean and billing was painless."</p>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#00c896,#7c6cf2);display:grid;place-items:center;font-weight:700;font-size:14px;">R</div>
-            <div>
-              <div style="font-size:13px;font-weight:600;">Rohan M.</div>
-              <div style="font-size:12px;color:var(--muted);">Founder, DevStack.io</div>
-            </div>
+      <h2 style="font-size:22px;font-weight:700;text-align:center;margin-bottom:8px;">Real user reviews</h2>
+      <p class="muted" style="text-align:center;font-size:15px;margin-bottom:28px;">Fake testimonials are gone. BrainAPI only shows approved reviews from real signed-in users.</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start;">
+        <div style="display:grid;gap:16px;">
+          <article class="panel">
+            <div class="muted" style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Public review summary</div>
+            <h3 id="reviewSummary" style="margin:0 0 8px;font-size:20px;font-weight:700;">Loading approved reviews...</h3>
+            <p id="reviewSummarySubtext" class="muted" style="margin:0;font-size:14px;line-height:1.6;">Fetching public feedback from real users.</p>
+          </article>
+          <div id="reviewGrid" style="display:grid;gap:12px;">
+            <article class="panel">
+              <div class="muted" style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Approved reviews</div>
+              <p style="margin:0;font-size:14px;line-height:1.7;color:#d7d7dc;">Approved reviews will appear here after users submit real feedback.</p>
+            </article>
           </div>
         </div>
-        <div class="panel" style="padding:20px;">
-          <div style="display:flex;gap:2px;margin-bottom:12px;color:#f5a623;">★★★★★</div>
-          <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#d7d7dc;">"The free trial is generous enough to prototype a full feature. Upgrading to Starter took 30 seconds. Probably the easiest AI API setup I've done."</p>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7c6cf2,#e85d8a);display:grid;place-items:center;font-weight:700;font-size:14px;">P</div>
-            <div>
-              <div style="font-size:13px;font-weight:600;">Priya S.</div>
-              <div style="font-size:12px;color:var(--muted);">Full-stack Developer</div>
-            </div>
+        <aside class="panel" style="display:grid;gap:14px;">
+          <div>
+            <div class="muted" style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Leave a review</div>
+            <h3 style="margin:0 0 8px;font-size:20px;font-weight:700;">Tell other builders how BrainAPI worked for you</h3>
+            <p id="reviewHelper" class="muted" style="margin:0;font-size:14px;line-height:1.7;">Write your review here. You will need to sign in before the submission is accepted, and every public review stays pending until approved.</p>
           </div>
-        </div>
-        <div class="panel" style="padding:20px;">
-          <div style="display:flex;gap:2px;margin-bottom:12px;color:#f5a623;">★★★★☆</div>
-          <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#d7d7dc;">"We use BrainAPI for our SaaS product's AI layer. Reliability has been great and the usage metering helps us manage costs. Support was responsive too."</p>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f5a623,#e85d8a);display:grid;place-items:center;font-weight:700;font-size:14px;">A</div>
-            <div>
-              <div style="font-size:13px;font-weight:600;">Arjun T.</div>
-              <div style="font-size:12px;color:var(--muted);">CTO, Claraform</div>
-            </div>
+          <div id="reviewGuestCta" style="display:grid;gap:10px;">
+            <a href="/ui/login.html" class="btn btn-primary" style="text-align:center;text-decoration:none;">Sign in to review</a>
+            <a href="/ui/signup.html" class="btn btn-ghost" style="text-align:center;text-decoration:none;">Create account</a>
           </div>
-        </div>
+          <form id="reviewForm" style="display:grid;gap:12px;">
+            <div class="grid">
+              <select id="reviewRating" class="field" required>
+                <option value="5">5/5</option>
+                <option value="4">4/5</option>
+                <option value="3">3/5</option>
+                <option value="2">2/5</option>
+                <option value="1">1/5</option>
+              </select>
+              <input id="reviewRole" class="field" maxlength="120" placeholder="Role or company (optional)" />
+            </div>
+            <input id="reviewHeadline" class="field" maxlength="140" placeholder="Short headline" required />
+            <textarea id="reviewBody" class="field" style="min-height:140px;resize:vertical;" maxlength="2000" placeholder="What worked well? What should other builders know?" required></textarea>
+            <button id="reviewSubmitBtn" type="submit" class="btn btn-primary">Submit review</button>
+          </form>
+          <div id="reviewStatus" class="status">Only approved reviews are shown publicly.</div>
+        </aside>
       </div>
     </section>
 
@@ -352,6 +359,137 @@
         demoOutput.textContent = 'Use /ui/dashboard.html#overview for authenticated playground execution.';
       });
     }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setReviewStatus(type, message) {
+      const el = document.getElementById('reviewStatus');
+      el.className = 'status ' + type;
+      el.textContent = message;
+    }
+
+    function renderReviews(payload) {
+      const summary = document.getElementById('reviewSummary');
+      const summarySubtext = document.getElementById('reviewSummarySubtext');
+      const grid = document.getElementById('reviewGrid');
+      const items = payload.items || [];
+      const total = Number(payload.total_reviews || 0);
+      const average = Number(payload.average_rating || 0).toFixed(1);
+
+      if (!items.length) {
+        summary.textContent = 'No public reviews yet';
+        summarySubtext.textContent = 'Be the first signed-in user to submit a review. We only show approved feedback from real accounts.';
+        grid.innerHTML = `
+          <article class="panel">
+            <div class="muted" style="font-size:12px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Approved reviews</div>
+            <p style="margin:0;font-size:14px;line-height:1.7;color:#d7d7dc;">There are no approved BrainAPI reviews yet. Sign in, submit one, and it can appear here after approval.</p>
+          </article>
+        `;
+        return;
+      }
+
+      summary.textContent = total + ' approved review' + (total === 1 ? '' : 's');
+      summarySubtext.textContent = 'Average rating: ' + average + '/5';
+      grid.innerHTML = items.map((item) => {
+        const role = item.role ? `<div class="muted" style="font-size:12px;">${escapeHtml(item.role)}</div>` : '';
+        const created = new Date(item.created_at).toLocaleDateString();
+        const verified = item.verified_customer ? '<span style="font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(0,200,150,0.12);color:var(--brand);">Verified user</span>' : '';
+        return `
+          <article class="panel" style="display:grid;gap:10px;">
+            <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;">
+              <div>
+                <div style="font-size:17px;font-weight:700;margin-bottom:4px;">${escapeHtml(item.headline)}</div>
+                <div class="muted" style="font-size:12px;">${escapeHtml(item.display_name)} · ${created}</div>
+                ${role}
+              </div>
+              <div style="display:grid;gap:8px;justify-items:end;">
+                <span style="font-size:12px;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,0.05);">${escapeHtml(item.rating)}/5</span>
+                ${verified}
+              </div>
+            </div>
+            <p style="margin:0;font-size:14px;line-height:1.7;color:#d7d7dc;">${escapeHtml(item.body_text)}</p>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function loadReviews() {
+      try {
+        const response = await fetch('/api/v1/public/reviews', {
+          headers: { 'Accept': 'application/json' }
+        });
+        if (!response.ok) {
+          throw new Error('Unable to load public reviews right now.');
+        }
+
+        const payload = await response.json();
+        renderReviews(payload);
+      } catch (error) {
+        document.getElementById('reviewSummary').textContent = 'Reviews unavailable';
+        document.getElementById('reviewSummarySubtext').textContent = error.message || 'The public reviews endpoint could not be loaded.';
+      }
+    }
+
+    function setReviewFormState() {
+      const token = getToken();
+      document.getElementById('reviewGuestCta').style.display = token ? 'none' : 'grid';
+      document.getElementById('reviewHelper').textContent = token
+        ? 'You are signed in. Submit a review and it will go live after approval.'
+        : 'Write your review here. You will need to sign in before the submission is accepted, and every public review stays pending until approved.';
+    }
+
+    async function submitReview(event) {
+      event.preventDefault();
+
+      const token = getToken();
+      if (!token) {
+        setReviewStatus('error', 'Please sign in before submitting a review.');
+        setReviewFormState();
+        return;
+      }
+
+      const submitButton = document.getElementById('reviewSubmitBtn');
+      submitButton.disabled = true;
+
+      try {
+        const response = await fetch('/api/v1/reviews', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            rating: Number(document.getElementById('reviewRating').value),
+            role: document.getElementById('reviewRole').value.trim(),
+            headline: document.getElementById('reviewHeadline').value.trim(),
+            body_text: document.getElementById('reviewBody').value.trim()
+          })
+        });
+
+        const payload = await response.json();
+        if (!response.ok) {
+          throw new Error(payload.detail || payload.message || 'Review submission failed.');
+        }
+
+        setReviewStatus('ok', payload.message || 'Review submitted.');
+        document.getElementById('reviewForm').reset();
+      } catch (error) {
+        setReviewStatus('error', error.message || 'Review submission failed.');
+      } finally {
+        submitButton.disabled = false;
+      }
+    }
+
+    document.getElementById('reviewForm').addEventListener('submit', submitReview);
+    setReviewFormState();
+    loadReviews();
   </script>
 </body>
 </html>

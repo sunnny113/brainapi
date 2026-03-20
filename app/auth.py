@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from .config import settings
 from .db import SessionLocal
+from .email_validation import validate_email_address
 from .models import APIKey, PasswordResetToken, UserAccount
 
 
@@ -86,6 +87,10 @@ def create_user_account(
     newsletter_opt_in: bool = False,
 ) -> dict:
     normalized_email = _normalize_email(email)
+    validation = validate_email_address(normalized_email, set(settings.blocked_email_domains_list))
+    if not validation.is_valid:
+        raise ValueError(validation.error or "Email is invalid")
+
     with SessionLocal() as db:
         existing = db.scalar(select(UserAccount).where(UserAccount.email == normalized_email))
         if existing is not None:

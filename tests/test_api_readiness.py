@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
 
@@ -25,7 +25,9 @@ client = TestClient(app)
 
 
 def unique_email(prefix: str = "test") -> str:
-    return f"{prefix}-{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}@example.com"
+    domain = os.environ.get("TEST_EMAIL_DOMAIN", "brainapi.site")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    return f"{prefix}-{timestamp}@{domain}"
 
 
 def test_health_endpoint():

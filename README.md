@@ -130,9 +130,18 @@ By default, `.env.example` sets:
 ```env
 PROVIDER=auto
 PROVIDER_FALLBACK_ORDER=ollama,groq,gemini,together,openai
+ROUTING_CONFIG_PATH=brainapi.config.json
 ```
 
 This startup-friendly mode tries providers in order and falls back automatically when one provider is unavailable.
+
+The unified AI gateway also supports config-driven routing across OpenAI and Anthropic via `brainapi.config.json`.
+Modes map to routing policies:
+
+- `cheap`: lowest estimated cost
+- `fast`: lowest observed or hinted latency
+- `best`: highest configured quality
+- `auto`: weighted balance across cost, latency, and quality
 
 Recommended low-cost setup:
 
@@ -220,7 +229,7 @@ OPENAI_API_KEY=your_key
 
 Capability notes in `auto` mode:
 
-- Text generation supports `ollama`, `groq`, `gemini`, `together`, and `openai`.
+- Text generation supports `anthropic`, `ollama`, `groq`, `gemini`, `together`, and `openai`.
 - Image generation supports `together` and `openai`.
 - Speech transcription supports `together` and `openai`.
 
@@ -228,6 +237,7 @@ Capability notes in `auto` mode:
 
 - `GET /health`
 - `GET /api/v1/metrics`
+- `POST /api/v1/ai`
 - `POST /api/v1/auth/signup`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/request-reset`
@@ -248,6 +258,36 @@ Capability notes in `auto` mode:
 - `GET /api/v1/public/plans` (public)
 - `POST /api/v1/public/signup-trial` (public)
 - `POST /api/v1/admin/emails/schedule-trial-reminders` (requires `X-Admin-Key`)
+
+## Unified AI examples
+
+Text request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/ai \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "type": "text",
+    "input": "Summarize the benefits of a unified AI gateway.",
+    "mode": "cheap",
+    "max_output_tokens": 200
+  }'
+```
+
+Image request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/ai \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{
+    "type": "image",
+    "input": "A futuristic server room with glowing data routes",
+    "mode": "best",
+    "size": "1024x1024"
+  }'
+```
 - `POST /api/v1/admin/emails/send-pending?limit=50` (requires `X-Admin-Key`)
 - `GET /api/v1/admin/usage?hours=24` (requires `X-Admin-Key`)
 

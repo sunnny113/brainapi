@@ -284,8 +284,8 @@
     <div class="auth-card">
       <div class="auth-header">
         <div class="auth-logo">BrainAPI</div>
-        <h1 class="auth-title">Get Started</h1>
-        <p class="auth-subtitle">Create your free account in seconds</p>
+        <h1 class="auth-title">Get Your API Key</h1>
+        <p class="auth-subtitle">Create your account and start calling BrainAPI in minutes</p>
       </div>
 
       <div id="alertBox" class="alert"></div>
@@ -311,7 +311,7 @@
             id="email" 
             name="email" 
             class="form-input" 
-            placeholder="you@example.com"
+            placeholder="you@brainapi.site"
             required
           />
           <div class="form-error" id="emailError"></div>
@@ -377,7 +377,7 @@
       </div>
 
       <div class="auth-footer" style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
-        <p>30-day free trial • No credit card required</p>
+        <p>7-day free trial • No credit card required</p>
       </div>
     </div>
   </div>
@@ -495,10 +495,24 @@
             sessionStorage.setItem('brainapi_user_api_key', response.api_key);
           }
 
-          showAlert('✓ Account created! Redirecting to dashboard...', 'success');
+          const onboardingPayload = {
+            name: response.user && response.user.name ? response.user.name : fullName,
+            email: response.user && response.user.email ? response.user.email : email,
+            apiKey: response.api_key || '',
+            trialEndsAt: response.trial_ends_at || null,
+            dashboardUrl: response.dashboard_url || '/ui/dashboard.html#overview',
+            quickstartUrl: response.quickstart_url || '/ui/onboarding.html',
+            supportEmail: response.support_email || '',
+          };
+          localStorage.setItem('brainapi.signup.onboarding', JSON.stringify(onboardingPayload));
+          sessionStorage.setItem('brainapi.signup.onboarding', JSON.stringify(onboardingPayload));
+          localStorage.setItem('brainapi_onboarding_pending', 'true');
+          sessionStorage.setItem('brainapi_onboarding_pending', 'true');
+
+          showAlert('Account created. Opening your quickstart...', 'success');
           
           setTimeout(() => {
-            window.location.href = '/ui/dashboard.html#overview';
+            window.location.href = response.quickstart_url || '/ui/onboarding.html';
           }, 1000);
         } else {
           showAlert('Signup failed. Please try again.', 'error');
@@ -547,7 +561,11 @@
     window.addEventListener('load', () => {
       const token = BrainAPIAuth.getToken();
       if (token) {
-        window.location.href = '/ui/dashboard.html#overview';
+        const pendingOnboarding = (
+          localStorage.getItem('brainapi_onboarding_pending') ||
+          sessionStorage.getItem('brainapi_onboarding_pending')
+        ) === 'true';
+        window.location.href = pendingOnboarding ? '/ui/onboarding.html' : '/ui/dashboard.html#overview';
       }
     });
   </script>

@@ -1,0 +1,8 @@
+{
+  "providers": ["openai", "anthropic"],
+  "routing": {
+    "default_mode": "cheap",
+    "enable_cache": false,
+    "cache_ttl_seconds": 60
+  }
+}

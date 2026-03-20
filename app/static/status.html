@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrainAPI Status</title>
+  <meta name="description" content="Public status page for BrainAPI." />
+  <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
+  <style>
+    :root {
+      --bg: #08111a;
+      --panel: #10202f;
+      --line: rgba(255,255,255,0.08);
+      --text: #eff4f8;
+      --muted: #9fb0be;
+      --ok: #3dd7a0;
+      --warn: #ffd166;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", Inter, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    .shell { width: min(940px, calc(100% - 32px)); margin: 0 auto; padding: 22px 0 40px; }
+    .nav, .footer { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+    .nav a, .footer a { color: var(--muted); text-decoration:none; }
+    .nav a:hover, .footer a:hover { color: var(--text); }
+    .brand { display:inline-flex; gap:10px; align-items:center; color: var(--text); font-weight:700; }
+    .logo { width:36px; height:36px; border-radius:12px; background: linear-gradient(135deg, var(--ok), #4bb6ff); display:grid; place-items:center; color:#032216; font-weight:800; }
+    .hero { padding: 30px 0 18px; }
+    h1 { margin:0 0 10px; font-size: clamp(2rem, 4vw, 3rem); letter-spacing:-0.03em; }
+    .lead { color:var(--muted); line-height:1.8; margin:0; max-width:720px; }
+    .status-card { margin-top:18px; border:1px solid var(--line); border-radius:20px; background:var(--panel); padding:24px; }
+    .pill { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:999px; font-size:13px; font-weight:700; }
+    .pill.ok { background: rgba(61,215,160,0.1); color: var(--ok); }
+    .pill.warn { background: rgba(255,209,102,0.1); color: var(--warn); }
+    .grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:16px; margin-top:18px; }
+    .panel { background: var(--panel); border:1px solid var(--line); border-radius:18px; padding:18px; }
+    .eyebrow { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; }
+    .value { margin-top:8px; font-size:20px; font-weight:700; }
+    .copy { color:var(--muted); line-height:1.75; font-size:15px; }
+    .json { margin-top:18px; border:1px solid var(--line); border-radius:18px; background:#081019; overflow:hidden; }
+    .json-top { padding:10px 14px; border-bottom:1px solid var(--line); color:var(--muted); font-size:13px; }
+    pre { margin:0; padding:16px; overflow:auto; color:#d7ffe8; font-size:13px; line-height:1.65; }
+    @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="nav">
+      <a class="brand" href="/"><span class="logo">B</span><span>BrainAPI</span></a>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        <a href="/ui/quickstart.html">Quickstart</a>
+        <a href="/ui/signup.html">Get API Key</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="eyebrow">Public status</div>
+        <h1>Current service health</h1>
+        <p class="lead">This page is meant for humans. The raw health check is still available for monitoring and automation.</p>
+      </section>
+
+      <section class="status-card">
+        <span class="pill ok" id="statusPill">Checking</span>
+        <h2 id="statusHeadline" style="margin:14px 0 8px;">Fetching BrainAPI status...</h2>
+        <p class="copy" id="statusCopy">Please wait while the page checks the service.</p>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="eyebrow">Provider</div>
+          <div class="value" id="providerValue">-</div>
+          <p class="copy">Current provider mode reported by the API.</p>
+        </article>
+        <article class="panel">
+          <div class="eyebrow">Support</div>
+          <div class="value" id="supportValue">-</div>
+          <p class="copy">If you hit issues during onboarding or billing, use this inbox.</p>
+        </article>
+        <article class="panel">
+          <div class="eyebrow">Health endpoint</div>
+          <div class="value"><a href="/health">/health</a></div>
+          <p class="copy">Machine-readable uptime and readiness signal.</p>
+        </article>
+        <article class="panel">
+          <div class="eyebrow">Metrics endpoint</div>
+          <div class="value"><a href="/api/v1/metrics">/api/v1/metrics</a></div>
+          <p class="copy">Lightweight public service metadata for dashboards or checks.</p>
+        </article>
+      </section>
+
+      <section class="json">
+        <div class="json-top">Latest public status payload</div>
+        <pre id="statusJson">Loading...</pre>
+      </section>
+    </main>
+
+    <footer class="footer" style="margin-top:24px;">
+      <span>BrainAPI status page</span>
+      <span><a href="/">Home</a> | <a href="/ui/quickstart.html">Quickstart</a></span>
+    </footer>
+  </div>
+
+  <script>
+    async function loadStatus() {
+      const statusPill = document.getElementById("statusPill");
+      const statusHeadline = document.getElementById("statusHeadline");
+      const statusCopy = document.getElementById("statusCopy");
+      const providerValue = document.getElementById("providerValue");
+      const supportValue = document.getElementById("supportValue");
+      const statusJson = document.getElementById("statusJson");
+
+      try {
+        const [statusResponse, healthResponse] = await Promise.all([
+          fetch("/api/v1/public/status"),
+          fetch("/health")
+        ]);
+        const statusData = await statusResponse.json();
+        const healthData = await healthResponse.json();
+        const operational = statusData.status === "operational" && healthData.status === "ok";
+
+        statusPill.className = "pill " + (operational ? "ok" : "warn");
+        statusPill.textContent = operational ? "Operational" : "Degraded";
+        statusHeadline.textContent = operational
+          ? "BrainAPI is currently operational."
+          : "BrainAPI is available but needs attention.";
+        statusCopy.textContent = operational
+          ? "Signup, docs, and API endpoints are reachable."
+          : "The service is responding, but one or more readiness checks are degraded.";
+
+        providerValue.textContent = statusData.provider || "-";
+        supportValue.textContent = statusData.support_email || "-";
+        statusJson.textContent = JSON.stringify({ status: statusData, health: healthData }, null, 2);
+      } catch (error) {
+        statusPill.className = "pill warn";
+        statusPill.textContent = "Unknown";
+        statusHeadline.textContent = "Status check failed.";
+        statusCopy.textContent = "The public status endpoint could not be reached from this page load.";
+        statusJson.textContent = String(error);
+      }
+    }
+
+    loadStatus();
+    setInterval(loadStatus, 30000);
+  </script>
+</body>
+</html>
