@@ -15,7 +15,10 @@ os.environ.setdefault("AUTO_CREATE_TABLES", "true")
 os.environ.setdefault("TRIAL_SIGNUP_ENABLED", "true")
 
 from app.main import app  # noqa: E402
+from app.db import init_db  # noqa: E402
 
+
+init_db()
 
 client = TestClient(app)
 
@@ -29,10 +32,27 @@ def test_root_and_status_pages_render():
     root_response = client.get("/")
     assert root_response.status_code == 200
     assert "Get API Key" in root_response.text
+    assert "AI memory API for chatbots, agents, and persistent context workflows." in root_response.text
 
     status_response = client.get("/status")
     assert status_response.status_code == 200
     assert "Current service health" in status_response.text
+
+    blog_response = client.get("/blog")
+    assert blog_response.status_code == 200
+    assert "Guides for AI memory API workflows" in blog_response.text
+
+    page_response = client.get("/chatbot-memory-api")
+    assert page_response.status_code == 200
+    assert "Build a chatbot memory API workflow" in page_response.text
+
+    article_response = client.get("/blog/store-ai-context-nodejs")
+    assert article_response.status_code == 200
+    assert "How to store AI context in Node.js" in article_response.text
+
+    quickstart_response = client.get("/ui/quickstart.html")
+    assert quickstart_response.status_code == 200
+    assert "Memory and chatbot resources" in quickstart_response.text
 
 
 def test_public_status_and_plan_endpoints():
@@ -49,6 +69,18 @@ def test_public_status_and_plan_endpoints():
     prices = {item["name"]: item["price_inr"] for item in plans_body["plans"]}
     assert prices["Starter"] == 499
     assert prices["Pro"] == 999
+
+    sitemap_response = client.get("/sitemap.xml")
+    assert sitemap_response.status_code == 200
+    assert "/blog" in sitemap_response.text
+    assert "/chatbot-memory-api" in sitemap_response.text
+    assert "/memory-api-for-ai-agents" in sitemap_response.text
+    assert "/ui/login.html" not in sitemap_response.text
+
+    robots_response = client.get("/robots.txt")
+    assert robots_response.status_code == 200
+    assert "Disallow: /ui/login.html" in robots_response.text
+    assert "Disallow: /ui/dashboard.html" in robots_response.text
 
 
 def test_auth_signup_returns_onboarding_metadata():
