@@ -104,8 +104,11 @@ class BillingCheckoutRequest(BaseModel):
 class PublicPlanTier(BaseModel):
     name: str
     price_usd: float
+    price_inr: float
     token_limit: str
     best_for: str
+    cta_label: str | None = None
+    popular: bool = False
 
 
 class PublicPlansResponse(BaseModel):
@@ -135,6 +138,9 @@ class PublicTrialSignupResponse(BaseModel):
     trial_ends_at: str | None
     is_paid: bool
     rate_limit_per_minute: int | None
+    dashboard_url: str | None = None
+    quickstart_url: str | None = None
+    support_email: str | None = None
 
 
 class AuthSignupRequest(BaseModel):
@@ -179,6 +185,9 @@ class AuthSignupResponse(AuthLoginResponse):
     api_key: str
     key_prefix: str
     trial_ends_at: datetime | None = None
+    dashboard_url: str | None = None
+    quickstart_url: str | None = None
+    support_email: str | None = None
 
 
 class AuthRequestResetResponse(BaseModel):

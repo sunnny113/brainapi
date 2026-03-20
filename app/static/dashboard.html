@@ -218,33 +218,25 @@
             <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">₹0</div>
             <p style="color:var(--muted);font-size:13px;margin:0;">50k tokens/month<br>Testing & early dev</p>
           </div>
-          <div class="price-card selectable" data-plan-name="Starter" data-amount-inr="349">
+          <div class="price-card selectable" data-plan-name="Starter" data-amount-inr="499">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
               <h4 style="margin:0;">Starter</h4>
               <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(0,200,150,0.1);color:var(--brand);">Popular</span>
             </div>
-            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">₹349<span style="font-size:14px;font-weight:400;color:var(--muted);">/mo</span></div>
-            <p style="color:var(--muted);font-size:13px;margin:0;">1M tokens<br>Solo developers</p>
+            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">₹499<span style="font-size:14px;font-weight:400;color:var(--muted);">/mo</span></div>
+            <p style="color:var(--muted);font-size:13px;margin:0;">1M tokens<br>Indie hackers</p>
           </div>
-          <div class="price-card selectable selected" data-plan-name="Pro" data-amount-inr="799">
+          <div class="price-card selectable selected" data-plan-name="Pro" data-amount-inr="999">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
               <h4 style="margin:0;">Pro</h4>
               <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(124,108,242,0.15);color:#a89af5;">Best value</span>
             </div>
-            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">₹799<span style="font-size:14px;font-weight:400;color:var(--muted);">/mo</span></div>
-            <p style="color:var(--muted);font-size:13px;margin:0;">3M tokens<br>Startups & teams</p>
-          </div>
-          <div class="price-card selectable" data-plan-name="Business" data-amount-inr="1699">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-              <h4 style="margin:0;">Business</h4>
-              <span style="font-size:11px;padding:2px 8px;border-radius:20px;background:rgba(255,181,106,0.1);color:var(--warning);">Enterprise</span>
-            </div>
-            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">₹1699<span style="font-size:14px;font-weight:400;color:var(--muted);">/mo</span></div>
-            <p style="color:var(--muted);font-size:13px;margin:0;">10M tokens<br>SaaS & production</p>
+            <div style="font-size:22px;font-weight:700;margin:10px 0 4px;">₹999<span style="font-size:14px;font-weight:400;color:var(--muted);">/mo</span></div>
+            <p style="color:var(--muted);font-size:13px;margin:0;">3M tokens<br>Shipping SaaS apps</p>
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <button class="btn btn-primary" id="upgradeBtn">Upgrade — ₹799/mo</button>
+          <button class="btn btn-primary" id="upgradeBtn">Upgrade — ₹999/mo</button>
           <button class="btn btn-secondary" id="billingBtn">Manage Billing</button>
         </div>
       </section>
@@ -366,7 +358,7 @@
     const logoutBtn = document.getElementById('logoutBtn');
 
     // Plan selection state — default to Pro
-    let selectedPlan = { name: 'Pro', amount_inr: 799 };
+    let selectedPlan = { name: 'Pro', amount_inr: 999 };
     document.querySelectorAll('.price-card.selectable').forEach(card => {
       card.addEventListener('click', () => {
         document.querySelectorAll('.price-card.selectable').forEach(c => c.classList.remove('selected'));

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrainAPI Quickstart</title>
+  <meta name="description" content="BrainAPI quickstart docs for signup, API key usage, unified requests, and support." />
+  <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
+  <style>
+    :root {
+      --bg: #08111a;
+      --panel: #0e1c2a;
+      --line: rgba(255,255,255,0.08);
+      --text: #eef3f7;
+      --muted: #a5b2c1;
+      --brand: #3dd7a0;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", Inter, system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    .shell { width: min(980px, calc(100% - 32px)); margin: 0 auto; padding: 22px 0 40px; }
+    .nav, .footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .nav a, .footer a { color: var(--muted); text-decoration: none; }
+    .nav a:hover, .footer a:hover { color: var(--text); }
+    .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); }
+    .logo { width: 36px; height: 36px; border-radius: 12px; background: linear-gradient(135deg, var(--brand), #4bb6ff); display: grid; place-items: center; color: #032216; font-weight: 800; }
+    .hero { padding: 28px 0 18px; }
+    h1 { margin: 0 0 12px; font-size: clamp(2rem, 4vw, 3.1rem); letter-spacing: -0.03em; }
+    p.lead { margin: 0; color: var(--muted); line-height: 1.8; max-width: 760px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 20px; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+    .eyebrow { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; }
+    h2, h3 { margin: 10px 0 8px; }
+    .copy { color: var(--muted); line-height: 1.75; font-size: 15px; }
+    .code-panel { margin-top: 12px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: #081019; }
+    .code-top { display:flex; justify-content:space-between; align-items:center; padding: 10px 14px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
+    .copy-btn { border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; background: transparent; color: var(--text); cursor: pointer; font-size: 12px; font-weight: 700; }
+    pre { margin: 0; padding: 16px; overflow: auto; color: #d7ffe8; font-size: 13px; line-height: 1.65; }
+    .stack { display: grid; gap: 18px; margin-top: 18px; }
+    .steps { margin: 12px 0 0; padding-left: 18px; color: var(--muted); line-height: 1.9; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+    .table th, .table td { border-bottom: 1px solid var(--line); text-align: left; padding: 12px 10px; font-size: 14px; }
+    .table th { color: var(--muted); font-weight: 600; }
+    .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; padding: 12px 16px; font-size: 14px; font-weight: 700; text-decoration: none; border: 1px solid var(--line); }
+    .btn-primary { background: var(--brand); color: #032216; border-color: transparent; }
+    .btn-secondary { color: var(--text); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.03); }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="nav">
+      <a class="brand" href="/"><span class="logo">B</span><span>BrainAPI</span></a>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        <a href="/status">Status</a>
+        <a href="/ui/signup.html">Signup</a>
+        <a href="/ui/login.html">Login</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="eyebrow">Quickstart</div>
+        <h1>Go from signup to first successful request in a few minutes.</h1>
+        <p class="lead">BrainAPI is built for fast activation. Create an account, get an API key instantly, call the unified endpoint, and check service status from a public page before you commit more time.</p>
+      </section>
+
+      <section class="grid">
+        <article class="panel">
+          <div class="eyebrow">Step 1</div>
+          <h2>Create an account</h2>
+          <p class="copy">Use the web signup flow for the fastest path. Your API key is returned immediately, the session is created for you, and the welcome email includes the same quickstart links.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="/ui/signup.html">Create account</a>
+            <a class="btn btn-secondary" href="/ui/login.html">Already have an account</a>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="eyebrow">Step 2</div>
+          <h2>Save the API key</h2>
+          <p class="copy">The key is shown right after signup and also stored in your dashboard session. Copy it once and keep it in your app secrets manager.</p>
+          <ol class="steps">
+            <li>Signup from the browser</li>
+            <li>Copy the key on the onboarding screen</li>
+            <li>Paste it into your app as <code>X-API-Key</code></li>
+          </ol>
+        </article>
+      </section>
+
+      <section class="stack">
+        <article class="panel">
+          <div class="eyebrow">Step 3</div>
+          <h2>Call the unified endpoint</h2>
+          <p class="copy">Use <code>POST /api/v1/ai</code> when you want one request format across text, image, and audio workflows.</p>
+          <div class="code-panel">
+            <div class="code-top">
+              <span>cURL example</span>
+              <button class="copy-btn" data-copy-target="quickstartCurl">Copy</button>
+            </div>
+            <pre id="quickstartCurl">curl -X POST https://api.brainapi.site/api/v1/ai \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "text",
+    "input": "Write a welcome message for a returning SaaS user.",
+    "mode": "fast"
+  }'</pre>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="eyebrow">Unified response</div>
+          <p class="copy">You always get the same response shape back regardless of provider routing.</p>
+          <div class="code-panel">
+            <div class="code-top">
+              <span>JSON response</span>
+              <button class="copy-btn" data-copy-target="quickstartResponse">Copy</button>
+            </div>
+            <pre id="quickstartResponse">{
+  "success": true,
+  "output": "Welcome back. Here is a concise summary of your account activity.",
+  "provider": "openai",
+  "tokens_used": 126,
+  "cost_estimate": 0.00042,
+  "model": "gpt-4.1-mini",
+  "latency_ms": 620,
+  "fallback_used": false
+}</pre>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="eyebrow">Legacy endpoints</div>
+          <h2>Existing routes still work</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Endpoint</th>
+                <th>Use case</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td><code>/api/v1/text/generate</code></td><td>Text generation</td></tr>
+              <tr><td><code>/api/v1/image/generate</code></td><td>Image generation</td></tr>
+              <tr><td><code>/api/v1/speech/transcribe</code></td><td>Audio transcription</td></tr>
+              <tr><td><code>/api/v1/automation/run</code></td><td>Simple workflow execution</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="panel">
+          <div class="eyebrow">Trust</div>
+          <h2>Support and status</h2>
+          <p class="copy">Prospects should not have to guess whether the product is maintained. BrainAPI exposes a public status page and a working support inbox.</p>
+          <div class="cta-row">
+            <a class="btn btn-secondary" href="/status">Open status</a>
+            <a class="btn btn-secondary" id="supportLink" href="mailto:brainapisupport@gmail.com">Email support</a>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <footer class="footer" style="margin-top:26px;">
+      <span>BrainAPI quickstart</span>
+      <span><a href="/">Home</a> | <a href="/status">Status</a> | <a href="/ui/signup.html">Get API Key</a></span>
+    </footer>
+  </div>
+
+  <script>
+    document.querySelectorAll("[data-copy-target]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copyTarget);
+        try {
+          await navigator.clipboard.writeText(target.textContent.trim());
+          const original = button.textContent;
+          button.textContent = "Copied";
+          setTimeout(() => { button.textContent = original; }, 1200);
+        } catch (error) {
+          button.textContent = "Copy manually";
+        }
+      });
+    });
+
+    document.getElementById("quickstartCurl").textContent =
+`curl -X POST ${window.location.origin}/api/v1/ai \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "type": "text",
+    "input": "Write a welcome message for a returning SaaS user.",
+    "mode": "fast"
+  }'`;
+
+    fetch("/api/v1/public/status")
+      .then((response) => response.json())
+      .then((data) => {
+        const link = document.getElementById("supportLink");
+        link.href = "mailto:" + data.support_email;
+        link.textContent = data.support_email;
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

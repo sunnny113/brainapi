@@ -42,15 +42,16 @@ from .config import settings
 from .db import init_db
 from .emails import (
     get_lead_contact_for_api_key,
+    queue_invoice_email,
+    queue_password_reset_email,
     queue_payment_success_email,
     queue_welcome_email,
-        queue_password_reset_email,
-        queue_invoice_email,
-        send_custom_email,
-        send_transactional_email,
+    send_custom_email,
+    send_transactional_email,
     schedule_trial_reminder_emails,
     send_pending_emails,
 )
+from .launch import launch_metrics_summary, public_status_payload, support_email_value
 from .leads import SignupError, create_trial_signup
 from .metering import per_key_usage_summary, record_usage_event, usage_summary
 from .schemas import (
@@ -107,10 +108,33 @@ in_memory_token_rate_limiter = InMemoryTokenRateLimiter()
 redis_token_rate_limiter = RedisTokenRateLimiter(settings.redis_url) if settings.redis_url else None
 
 PUBLIC_PLAN_CATALOG = [
-    {"name": "Free", "price_usd": 0, "amount_inr": 0, "token_limit": "50k tokens/month", "best_for": "testing"},
-    {"name": "Starter", "price_usd": 4, "amount_inr": 349, "token_limit": "1M tokens", "best_for": "developers"},
-    {"name": "Pro", "price_usd": 9, "amount_inr": 799, "token_limit": "3M tokens", "best_for": "startups"},
-    {"name": "Business", "price_usd": 19, "amount_inr": 1699, "token_limit": "10M tokens", "best_for": "SaaS apps"},
+    {
+        "name": "Free",
+        "price_usd": 0,
+        "amount_inr": 0,
+        "token_limit": "50k tokens/month",
+        "best_for": "testing and side projects",
+        "cta_label": "Get API Key",
+        "popular": False,
+    },
+    {
+        "name": "Starter",
+        "price_usd": 6,
+        "amount_inr": 499,
+        "token_limit": "1M tokens/month",
+        "best_for": "indie hackers",
+        "cta_label": "Start for Rs499",
+        "popular": True,
+    },
+    {
+        "name": "Pro",
+        "price_usd": 12,
+        "amount_inr": 999,
+        "token_limit": "3M tokens/month",
+        "best_for": "shipping SaaS apps",
+        "cta_label": "Upgrade to Pro",
+        "popular": False,
+    },
 ]
 
 
@@ -404,7 +428,12 @@ from fastapi.responses import FileResponse
 
 @app.get("/")
 def web_ui():
-    return FileResponse("app/static/index.html")
+    return FileResponse("app/static/launch.html")
+
+
+@app.get("/status")
+def public_status_page():
+    return FileResponse("app/static/status.html")
 
 
 @app.get("/favicon.ico")
@@ -433,6 +462,11 @@ def health_check():
     }
 
 
+@app.get("/api/v1/public/status")
+def public_status():
+    return public_status_payload()
+
+
 @app.get("/api/v1/metrics")
 def metrics(request: Request):
     return {
@@ -441,6 +475,7 @@ def metrics(request: Request):
         "provider_ready": settings.provider_ready,
         "usage_metering_enabled": settings.enable_usage_metering,
         "redis_rate_limiter_enabled": bool(settings.redis_url),
+        "support_email": support_email_value(),
     }
 
 
@@ -520,6 +555,9 @@ def auth_signup(payload: AuthSignupRequest):
         api_key=signup["api_key"],
         key_prefix=signup["key_prefix"],
         trial_ends_at=signup["trial_ends_at"],
+        dashboard_url="/ui/dashboard.html#overview",
+        quickstart_url="/ui/onboarding.html",
+        support_email=support_email_value(),
     )
 
 
@@ -702,13 +740,16 @@ def public_plans():
         plan_name=settings.default_plan_name,
         amount_inr=settings.default_plan_amount_inr,
         trial_days=settings.trial_default_days,
-        includes=["Text", "Image", "Speech", "Automation"],
+        includes=["Unified AI endpoint", "Instant API key", "Usage analytics", "Email onboarding"],
         plans=[
             {
                 "name": item["name"],
                 "price_usd": float(item["price_usd"]),
+                "price_inr": float(item["amount_inr"]),
                 "token_limit": item["token_limit"],
                 "best_for": item["best_for"],
+                "cta_label": item.get("cta_label"),
+                "popular": bool(item.get("popular")),
             }
             for item in PUBLIC_PLAN_CATALOG
         ],
@@ -745,7 +786,12 @@ def public_signup_trial(payload: PublicTrialSignupRequest):
     except Exception as exc:
         logger.warning("Public signup welcome email failed: %s", exc)
 
-    return PublicTrialSignupResponse(**result)
+    return PublicTrialSignupResponse(
+        **result,
+        dashboard_url="/ui/dashboard.html#overview",
+        quickstart_url="/ui/onboarding.html",
+        support_email=support_email_value(),
+    )
 
 
 @app.post("/api/v1/admin/api-keys")
@@ -812,6 +858,12 @@ def admin_update_api_key_billing(key_id: str, payload: AdminUpdateApiKeyBillingR
 def admin_usage_summary(request: Request, hours: int = Query(default=24, ge=1, le=24 * 30)):
     require_admin(request)
     return usage_summary(hours=hours)
+
+
+@app.get("/api/v1/admin/launch-metrics")
+def admin_launch_metrics(request: Request, days: int = Query(default=30, ge=1, le=365)):
+    require_admin(request)
+    return launch_metrics_summary(days=days)
 
 
 @app.post("/api/v1/admin/emails/schedule-trial-reminders")
@@ -1152,7 +1204,7 @@ def robots_txt():
 @app.get("/sitemap.xml")
 def sitemap_xml():
     base = settings.public_base_url.rstrip("/")
-    urls = ["/", "/ui/index.html", "/ui/login.html", "/ui/signup.html", "/ui/developer.html"]
+    urls = ["/", "/status", "/ui/quickstart.html", "/ui/login.html", "/ui/signup.html"]
     xml_entries = "\n".join(
         f"  <url><loc>{base}{u}</loc><changefreq>weekly</changefreq></url>"
         for u in urls

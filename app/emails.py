@@ -10,6 +10,7 @@ from sqlalchemy import and_, desc, func, select
 from .config import settings
 from .db import SessionLocal
 from .email_validation import normalize_email, validate_email_address
+from .launch import support_email_value
 from .models import APIKey, EmailEvent, SignupLead
 
 
@@ -116,19 +117,32 @@ def queue_email_event(
 
 def queue_welcome_email(*, name: str, email: str, api_key: str, trial_ends_at: datetime | None) -> dict:
     ends_text = trial_ends_at.isoformat() if trial_ends_at else "N/A"
+    base_url = settings.public_base_url.rstrip("/")
+    quickstart_url = f"{base_url}/ui/quickstart.html"
+    dashboard_url = f"{base_url}/ui/dashboard.html#overview"
+    status_url = f"{base_url}/status"
+    support_email = support_email_value()
     body = (
         f"Hi {name},\n\n"
-        "Welcome to BrainAPI! Your free trial API key is active.\n\n"
+        "Welcome to BrainAPI. Your API key is active and ready to use.\n\n"
         f"API Key: {api_key}\n"
         f"Trial Ends At (UTC): {ends_text}\n\n"
-        "Get started: /docs\n"
-        "If you need help, reply to this email.\n\n"
+        "Start here:\n"
+        f"1. Quickstart docs: {quickstart_url}\n"
+        f"2. Dashboard: {dashboard_url}\n"
+        f"3. Status: {status_url}\n\n"
+        "First request:\n"
+        f"curl -X POST {base_url}/api/v1/ai \\\n"
+        f"  -H \"X-API-Key: {api_key}\" \\\n"
+        "  -H \"Content-Type: application/json\" \\\n"
+        "  -d '{\"type\":\"text\",\"input\":\"Say hello from BrainAPI\",\"mode\":\"cheap\"}'\n\n"
+        f"Need help? Reply to this email or write to {support_email}.\n\n"
         "- BrainAPI"
     )
     return queue_email_event(
         event_type="welcome",
         recipient_email=email,
-        subject="Welcome to BrainAPI - Your Trial API Key",
+        subject="Your BrainAPI API key is ready",
         body_text=body,
         dedupe_key=f"welcome:{normalize_email(email)}",
     )
@@ -153,6 +167,7 @@ def queue_payment_success_email(*, name: str | None, email: str, plan_name: str)
 
 def queue_password_reset_email(*, email: str, reset_token: str) -> dict:
     reset_url = f"https://api.brainapi.site/ui/forgot-password.html?token={reset_token}"
+    support_email = support_email_value()
     body = (
         "Hi,\n\n"
         "You requested a password reset for your BrainAPI account.\n\n"
@@ -160,7 +175,7 @@ def queue_password_reset_email(*, email: str, reset_token: str) -> dict:
         f"{reset_url}\n\n"
         "If you did not request this, you can safely ignore this email.\n\n"
         "- BrainAPI\n"
-        "brainapisupport@gmail.com"
+        f"{support_email}"
     )
     normalized = normalize_email(email)
     return queue_email_event(
@@ -185,6 +200,7 @@ def queue_invoice_email(
 
     display_name = name or "there"
     invoice_date = date.today().strftime("%d %b %Y")
+    support_email = support_email_value()
     body = (
         f"Hi {display_name},\n\n"
         "Thank you for your payment. Here is your invoice:\n\n"
@@ -196,7 +212,7 @@ def queue_invoice_email(
         "Your BrainAPI subscription is now active.\n"
         "For any billing questions, reply to this email.\n\n"
         "- BrainAPI Team\n"
-        "brainapisupport@gmail.com"
+        f"{support_email}"
     )
     return queue_email_event(
         event_type="invoice",

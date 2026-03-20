@@ -88,6 +88,8 @@ class Settings(BaseSettings):
     email_from_address: str = ""
     email_from_name: str = "BrainAPI"
     email_reply_to: str = ""
+    support_email: str = "brainapisupport@gmail.com"
+    founder_name: str = "BrainAPI founder"
     blocked_email_domains: str = "example.com,test.com,fake.com"
     skip_email_in_development: bool = True
     auth_token_secret: str = "dev-brainapi-auth-secret"

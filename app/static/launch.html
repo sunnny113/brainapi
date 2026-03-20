@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BrainAPI | Context-ready AI API for developers</title>
+  <meta name="description" content="BrainAPI gives developers one API key, one AI endpoint, onboarding, usage tracking, and founder support so they can ship faster." />
+  <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
+  <style>
+    :root {
+      --bg: #07111a;
+      --panel: #0f1d2a;
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #eef3f7;
+      --muted: #a8b5c3;
+      --brand: #3dd7a0;
+      --brand-strong: #1fb980;
+      --accent: #ffd166;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(61, 215, 160, 0.14), transparent 34%),
+        linear-gradient(180deg, #08111a 0%, #07111a 58%, #0a1521 100%);
+      color: var(--text);
+    }
+    a { color: inherit; text-decoration: none; }
+    code, pre { font-family: "Cascadia Code", Consolas, monospace; }
+    .shell { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 0;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .logo {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand), #4bb6ff);
+      color: #032216;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 14px;
+      flex-wrap: wrap;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 1px solid var(--line);
+      transition: 0.18s ease;
+    }
+    .btn-primary {
+      background: var(--brand);
+      color: #032016;
+      border-color: transparent;
+    }
+    .btn-primary:hover { background: var(--brand-strong); }
+    .btn-secondary:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .hero { padding: 46px 0 30px; display: grid; gap: 22px; }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--brand);
+      border: 1px solid rgba(61, 215, 160, 0.24);
+      background: rgba(61, 215, 160, 0.08);
+      padding: 8px 12px;
+      border-radius: 999px;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 5vw, 4.5rem);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+      max-width: 680px;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 650px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .hero-proof {
+      display: grid;
+      gap: 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 20px;
+      box-shadow: 0 20px 70px rgba(0, 0, 0, 0.22);
+    }
+    .proof-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .proof-card, .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+    .proof-label, .eyebrow {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .proof-value {
+      margin-top: 6px;
+      font-size: 20px;
+      font-weight: 700;
+    }
+    .section { padding: 22px 0; }
+    .section-header { margin-bottom: 18px; }
+    .section h2 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: -0.03em;
+    }
+    .section p.lead {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 720px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .feature-title { margin: 10px 0 6px; font-size: 18px; }
+    .feature-copy { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+    .code-wrap {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 18px;
+      align-items: start;
+    }
+    .code-panel {
+      background: #081019;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .code-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .copy-btn {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .copy-btn:hover { background: rgba(255, 255, 255, 0.04); }
+    pre {
+      margin: 0;
+      padding: 18px;
+      overflow: auto;
+      color: #d7ffe8;
+      font-size: 13px;
+      line-height: 1.65;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .price-card.popular {
+      border-color: rgba(61, 215, 160, 0.42);
+      box-shadow: 0 0 0 1px rgba(61, 215, 160, 0.16);
+    }
+    .popular-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--brand);
+      background: rgba(61, 215, 160, 0.1);
+    }
+    .price {
+      font-size: 34px;
+      font-weight: 800;
+      margin: 10px 0 6px;
+    }
+    .price small {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .price-list {
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .trust-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .founder {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+    .founder-note {
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 15px;
+      margin: 0;
+    }
+    .footer-cta {
+      margin: 10px 0 54px;
+      padding: 26px;
+      border: 1px solid rgba(255, 209, 102, 0.18);
+      background: linear-gradient(135deg, rgba(255, 209, 102, 0.08), rgba(61, 215, 160, 0.07));
+      border-radius: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+    }
+    .footer {
+      padding: 22px 0 36px;
+      color: var(--muted);
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 980px) {
+      .hero-grid,
+      .code-wrap,
+      .founder,
+      .grid-3,
+      .pricing-grid,
+      .trust-grid,
+      .proof-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="nav">
+      <a class="brand" href="/">
+        <span class="logo">B</span>
+        <span>BrainAPI</span>
+      </a>
+      <nav class="nav-links">
+        <a href="/ui/quickstart.html">Quickstart</a>
+        <a href="/status">Status</a>
+        <a href="/ui/login.html">Login</a>
+        <a class="btn btn-primary" href="/ui/signup.html">Get API Key</a>
+      </nav>
+    </header>
+    <main>
+      <section class="hero">
+        <span class="badge">Launch faster with one API key, one onboarding path, and founder support</span>
+        <div class="hero-grid">
+          <div>
+            <h1>Ship context-heavy AI features without stitching five tools together.</h1>
+            <p>BrainAPI gives developers a unified AI endpoint, instant API keys, billing-ready rate limits, and a public trust layer so they can launch usable AI products fast.</p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="/ui/signup.html">Get API Key</a>
+              <a class="btn btn-secondary" href="/ui/quickstart.html">Read quickstart</a>
+            </div>
+          </div>
+          <aside class="hero-proof">
+            <div class="panel">
+              <div class="proof-label">Live status</div>
+              <div class="proof-value" id="heroStatus">Checking service health...</div>
+              <p class="feature-copy" style="margin-top:8px;">Public status, health endpoint, and docs are available before signup.</p>
+            </div>
+            <div class="proof-row">
+              <div class="proof-card">
+                <div class="proof-label">Onboarding</div>
+                <div class="proof-value">Instant API key</div>
+              </div>
+              <div class="proof-card">
+                <div class="proof-label">Support</div>
+                <div class="proof-value" id="heroSupport">Founder inbox</div>
+              </div>
+            </div>
+            <div class="proof-card">
+              <div class="proof-label">Who this is for</div>
+              <div class="proof-value">Developers, indie hackers, AI builders</div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>The problem</h2>
+          <p class="lead">AI builders lose time wiring providers, protecting endpoints, managing keys, and writing onboarding glue before they ever ship user value.</p>
+        </div>
+        <div class="grid-3">
+          <article class="panel">
+            <div class="eyebrow">Provider sprawl</div>
+            <h3 class="feature-title">Multiple SDKs, inconsistent responses</h3>
+            <p class="feature-copy">Switching models usually means new payloads, error handling, retries, and duplicated billing logic.</p>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Weak first-run UX</div>
+            <h3 class="feature-title">Users sign up but do not make the first successful call</h3>
+            <p class="feature-copy">If the API key, docs, welcome email, and quickstart are disconnected, activation drops fast.</p>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">No trust layer</div>
+            <h3 class="feature-title">Prospects want proof before they integrate</h3>
+            <p class="feature-copy">A support inbox, status page, simple docs, and visible founder ownership are table stakes.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>The BrainAPI approach</h2>
+          <p class="lead">BrainAPI keeps the dev experience narrow: one signup path, one API key, one unified endpoint, and clear fallback infrastructure behind the scenes.</p>
+        </div>
+        <div class="grid-3">
+          <article class="panel">
+            <div class="eyebrow">Step 1</div>
+            <h3 class="feature-title">Get an API key instantly</h3>
+            <p class="feature-copy">Signup returns the key immediately, stores the session, and routes the user into a quickstart instead of a dead-end dashboard.</p>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Step 2</div>
+            <h3 class="feature-title">Use one endpoint</h3>
+            <p class="feature-copy">Text, image, and audio calls can run through the unified endpoint so your app logic stays consistent.</p>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Step 3</div>
+            <h3 class="feature-title">Upgrade when the product is live</h3>
+            <p class="feature-copy">Free tier for testing, paid plans for production, and usage tracking so you know when activation becomes revenue.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>First request</h2>
+          <p class="lead">The fastest path to trust is a working request in under five minutes.</p>
+        </div>
+        <div class="code-wrap">
+          <div class="code-panel">
+            <div class="code-top">
+              <span>Unified endpoint example</span>
+              <button class="copy-btn" data-copy-target="launchCode">Copy</button>
+            </div>
+            <pre id="launchCode">curl -X POST https://api.brainapi.site/api/v1/ai \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "text",
+    "input": "Summarize the latest events from my app for a returning user.",
+    "mode": "cheap"
+  }'</pre>
+          </div>
+          <aside class="panel">
+            <div class="eyebrow">Why this converts</div>
+            <h3 class="feature-title">No fluff, just the path to value</h3>
+            <p class="feature-copy">Signup, copy key, make one request, check status, and upgrade only when the app needs higher limits.</p>
+            <div style="display:grid;gap:10px;margin-top:16px;">
+              <a class="btn btn-primary" href="/ui/signup.html">Get API Key</a>
+              <a class="btn btn-secondary" href="/ui/quickstart.html">See docs</a>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>Simple pricing</h2>
+          <p class="lead">Start free, then upgrade into the 499 to 999 INR range when your integration is real.</p>
+        </div>
+        <div class="pricing-grid" id="pricingGrid">
+          <article class="panel price-card">
+            <div class="eyebrow">Loading plans</div>
+            <div class="price">Please wait</div>
+            <p class="feature-copy">Fetching plan details.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
+          <h2>Trust system</h2>
+          <p class="lead">No fake social proof. Just the signals a developer actually checks before integrating.</p>
+        </div>
+        <div class="trust-grid">
+          <article class="panel">
+            <div class="eyebrow">Support</div>
+            <h3 class="feature-title" id="supportCard">Founder support</h3>
+            <p class="feature-copy">Working inbox for onboarding, billing, and integration questions.</p>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Docs</div>
+            <h3 class="feature-title">Readable quickstart</h3>
+            <p class="feature-copy">Simple examples, auth, endpoint shapes, and the exact first request to run.</p>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Status</div>
+            <h3 class="feature-title">Public health surface</h3>
+            <p class="feature-copy">Human-readable status page plus machine-readable health and metrics endpoints.</p>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Founder built</div>
+            <h3 class="feature-title" id="founderCard">Built by the founder</h3>
+            <p class="feature-copy">Prospects can see there is a real person accountable for reliability and support.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="founder">
+          <article class="panel">
+            <div class="eyebrow">Built by founder</div>
+            <h2 style="margin-top:8px;">Founder-led support is part of the product.</h2>
+            <p class="founder-note">BrainAPI is intentionally simple: instant signup, immediate API key access, clear pricing, and a direct support path. If you are building this week and get stuck, you should be able to email a real human and keep shipping.</p>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Fast launch checklist</div>
+            <ul class="price-list">
+              <li>Public landing page with real code example</li>
+              <li>Signup that reveals the API key immediately</li>
+              <li>Welcome email with quickstart and support</li>
+              <li>Status page and health endpoint</li>
+              <li>Free tier plus clear upgrade path</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="footer-cta">
+        <div>
+          <div class="eyebrow" style="color:#6ee7b7;">Ready to launch</div>
+          <h2 style="margin:8px 0 6px;">Get the first 10 users with a product that feels usable on day one.</h2>
+          <p class="lead" style="max-width:620px;">Start with the free tier, ship a real request, then upgrade when usage proves demand.</p>
+        </div>
+        <div style="display:grid;gap:10px;min-width:220px;">
+          <a class="btn btn-primary" href="/ui/signup.html">Get API Key</a>
+          <a class="btn btn-secondary" href="/status">Open status</a>
+        </div>
+      </section>
+    </main>
+    <footer class="footer">
+      <span>BrainAPI</span>
+      <span><a href="/ui/quickstart.html">Docs</a> | <a href="/status">Status</a> | <a id="footerSupport" href="mailto:brainapisupport@gmail.com">Support</a></span>
+    </footer>
+  </div>
+  <script>
+    async function readJson(url) {
+      const response = await fetch(url, { headers: { "Accept": "application/json" } });
+      if (!response.ok) throw new Error("Failed to fetch " + url);
+      return response.json();
+    }
+
+    function renderPlans(plans) {
+      const grid = document.getElementById("pricingGrid");
+      grid.innerHTML = plans.map((plan) => {
+        const cta = plan.name === "Free" ? "Get API Key" : (plan.cta_label || "Upgrade");
+        const popularTag = plan.popular ? '<span class="popular-tag">Popular</span>' : "";
+        const price = plan.price_inr > 0 ? "Rs" + Number(plan.price_inr).toFixed(0) + '<small>/month</small>' : "Free";
+        return `
+          <article class="panel price-card ${plan.popular ? "popular" : ""}">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+              <div class="eyebrow">${plan.best_for}</div>
+              ${popularTag}
+            </div>
+            <h3 class="feature-title">${plan.name}</h3>
+            <div class="price">${price}</div>
+            <p class="feature-copy">${plan.token_limit}</p>
+            <ul class="price-list">
+              <li>Instant API key</li>
+              <li>Quickstart docs</li>
+              <li>${plan.best_for}</li>
+            </ul>
+            <div style="margin-top:16px;">
+              <a class="btn ${plan.name === "Free" ? "btn-secondary" : "btn-primary"}" href="/ui/signup.html">${cta}</a>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function updateLaunchCode() {
+      const baseUrl = window.location.origin;
+      document.getElementById("launchCode").textContent =
+`curl -X POST ${baseUrl}/api/v1/ai \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "type": "text",
+    "input": "Summarize the latest events from my app for a returning user.",
+    "mode": "cheap"
+  }'`;
+    }
+
+    async function loadTrustData() {
+      try {
+        const status = await readJson("/api/v1/public/status");
+        document.getElementById("heroStatus").textContent = status.status === "operational" ? "Operational" : "Degraded";
+        document.getElementById("heroSupport").textContent = status.support_email;
+        document.getElementById("supportCard").textContent = status.support_email;
+        document.getElementById("founderCard").textContent = "Built by " + status.founder_name;
+        const supportLink = document.getElementById("footerSupport");
+        supportLink.href = "mailto:" + status.support_email;
+        supportLink.textContent = status.support_email;
+      } catch (error) {
+        document.getElementById("heroStatus").textContent = "Status endpoint unavailable";
+      }
+
+      try {
+        const plans = await readJson("/api/v1/public/plans");
+        renderPlans(plans.plans || []);
+      } catch (error) {
+        renderPlans([
+          { name: "Free", price_inr: 0, token_limit: "50k tokens/month", best_for: "testing", popular: false },
+          { name: "Starter", price_inr: 499, token_limit: "1M tokens/month", best_for: "indie hackers", popular: true },
+          { name: "Pro", price_inr: 999, token_limit: "3M tokens/month", best_for: "shipping SaaS apps", popular: false }
+        ]);
+      }
+    }
+
+    document.querySelectorAll("[data-copy-target]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const target = document.getElementById(button.dataset.copyTarget);
+        try {
+          await navigator.clipboard.writeText(target.textContent.trim());
+          const original = button.textContent;
+          button.textContent = "Copied";
+          setTimeout(() => { button.textContent = original; }, 1200);
+        } catch (error) {
+          button.textContent = "Copy manually";
+        }
+      });
+    });
+
+    updateLaunchCode();
+    loadTrustData();
+  </script>
+</body>
+</html>
