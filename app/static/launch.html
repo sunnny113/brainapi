@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BrainAPI | Context-ready AI API for developers</title>
-  <meta name="description" content="BrainAPI gives developers one API key, one AI endpoint, onboarding, usage tracking, and founder support so they can ship faster." />
+  <title>BrainAPI: AI Memory API & Chatbot API</title>
+  <meta name="description" content="Developer-first AI API to handle context-heavy chatbot, agent, and automation workflows with one unified endpoint and fast onboarding." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://api.brainapi.site/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="BrainAPI: AI Memory API & Chatbot API" />
+  <meta property="og:description" content="Developer-first AI API for context-heavy chatbot, agent, and automation workflows." />
+  <meta property="og:url" content="https://api.brainapi.site/" />
+  <meta property="og:image" content="https://api.brainapi.site/ui/favicon.svg" />
   <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
   <style>
     :root {
@@ -418,6 +425,7 @@
       </a>
       <nav class="nav-links">
         <a href="/ui/quickstart.html">Quickstart</a>
+        <a href="/blog">Blog</a>
         <a href="#reviews">Reviews</a>
         <a href="/status">Status</a>
         <a href="/ui/login.html">Login</a>
@@ -426,11 +434,11 @@
     </header>
     <main>
       <section class="hero">
-        <span class="badge">Launch faster with one API key, one onboarding path, and founder support</span>
+        <span class="badge">AI API for chatbots, agents, and context-heavy workflows</span>
         <div class="hero-grid">
           <div>
-            <h1>Ship context-heavy AI features without stitching five tools together.</h1>
-            <p>BrainAPI gives developers a unified AI endpoint, instant API keys, billing-ready rate limits, and a public trust layer so they can launch usable AI products fast.</p>
+            <h1>AI memory API for chatbots, agents, and persistent context workflows.</h1>
+            <p>BrainAPI gives developers one AI API for text, image, speech, automation, and context-heavy chatbot experiences. Use it as a clean execution layer while your app decides what memory and user context to send.</p>
             <div class="hero-actions">
               <a class="btn btn-primary" href="/ui/signup.html">Get API Key</a>
               <a class="btn btn-secondary" href="/ui/quickstart.html">Read quickstart</a>
@@ -463,7 +471,7 @@
       <section class="section">
         <div class="section-header">
           <h2>The problem</h2>
-          <p class="lead">AI builders lose time wiring providers, protecting endpoints, managing keys, and writing onboarding glue before they ever ship user value.</p>
+          <p class="lead">Developers trying to build memory-aware chatbots or AI agents usually end up mixing context logic, provider SDKs, retries, and billing controls in the same fragile layer.</p>
         </div>
         <div class="grid-3">
           <article class="panel">
@@ -487,7 +495,7 @@
       <section class="section">
         <div class="section-header">
           <h2>The BrainAPI approach</h2>
-          <p class="lead">BrainAPI keeps the dev experience narrow: one signup path, one API key, one unified endpoint, and clear fallback infrastructure behind the scenes.</p>
+          <p class="lead">BrainAPI keeps the dev experience narrow: one signup path, one API key, one unified endpoint, and clear fallback infrastructure behind the scenes for context-heavy AI products.</p>
         </div>
         <div class="grid-3">
           <article class="panel">
@@ -510,6 +518,39 @@
 
       <section class="section">
         <div class="section-header">
+          <h2>Resources for memory-aware AI builders</h2>
+          <p class="lead">If you are trying to rank a chatbot memory architecture, store AI context in Node.js, or compare BrainAPI against provider-native memory tooling, start here.</p>
+        </div>
+        <div class="grid-3">
+          <article class="panel">
+            <div class="eyebrow">Landing page</div>
+            <h3 class="feature-title">Chatbot memory API</h3>
+            <p class="feature-copy">See how BrainAPI fits into a chatbot stack that needs persistent context without provider lock-in.</p>
+            <div style="margin-top:16px;">
+              <a class="btn btn-secondary" href="/chatbot-memory-api">Open page</a>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Tutorial</div>
+            <h3 class="feature-title">Store AI context in Node.js</h3>
+            <p class="feature-copy">A practical Node.js pattern for selecting user context and sending the final request through BrainAPI.</p>
+            <div style="margin-top:16px;">
+              <a class="btn btn-secondary" href="/blog/store-ai-context-nodejs">Read guide</a>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="eyebrow">Comparison</div>
+            <h3 class="feature-title">OpenAI memory API alternative</h3>
+            <p class="feature-copy">Learn when provider-native memory is enough and when a unified AI gateway makes more sense.</p>
+            <div style="margin-top:16px;">
+              <a class="btn btn-secondary" href="/blog/openai-memory-api-alternative">Read guide</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-header">
           <h2>First request</h2>
           <p class="lead">The fastest path to trust is a working request in under five minutes.</p>
         </div>
@@ -524,8 +565,8 @@
   -H "Content-Type: application/json" \
   -d '{
     "type": "text",
-    "input": "Summarize the latest events from my app for a returning user.",
-    "mode": "cheap"
+    "input": "Summarize the most relevant context for a returning chatbot user.",
+    "mode": "auto"
   }'</pre>
           </div>
           <aside class="panel">
@@ -653,18 +694,18 @@
       <section class="footer-cta">
         <div>
           <div class="eyebrow" style="color:#6ee7b7;">Ready to launch</div>
-          <h2 style="margin:8px 0 6px;">Get the first 10 users with a product that feels usable on day one.</h2>
-          <p class="lead" style="max-width:620px;">Start with the free tier, ship a real request, then upgrade when usage proves demand.</p>
+          <h2 style="margin:8px 0 6px;">Ship the first memory-aware AI workflow without overbuilding the stack.</h2>
+          <p class="lead" style="max-width:620px;">Start with the free tier, test the unified endpoint, and add your own context layer only where it improves the product.</p>
         </div>
         <div style="display:grid;gap:10px;min-width:220px;">
           <a class="btn btn-primary" href="/ui/signup.html">Get API Key</a>
-          <a class="btn btn-secondary" href="/status">Open status</a>
+          <a class="btn btn-secondary" href="/blog">Read blog</a>
         </div>
       </section>
     </main>
     <footer class="footer">
       <span>BrainAPI</span>
-      <span><a href="/ui/quickstart.html">Docs</a> | <a href="/status">Status</a> | <a id="footerSupport" href="mailto:brainapisupport@gmail.com">Support</a></span>
+      <span><a href="/ui/quickstart.html">Docs</a> | <a href="/blog">Blog</a> | <a href="/status">Status</a> | <a id="footerSupport" href="mailto:brainapisupport@gmail.com">Support</a></span>
     </footer>
   </div>
   <script>
@@ -833,14 +874,14 @@
     function updateLaunchCode() {
       const baseUrl = window.location.origin;
       document.getElementById("launchCode").textContent =
-`curl -X POST ${baseUrl}/api/v1/ai \\
-  -H "X-API-Key: YOUR_API_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "type": "text",
-    "input": "Summarize the latest events from my app for a returning user.",
-    "mode": "cheap"
-  }'`;
+  `curl -X POST ${baseUrl}/api/v1/ai \\
+    -H "X-API-Key: YOUR_API_KEY" \\
+    -H "Content-Type: application/json" \\
+    -d '{
+      "type": "text",
+      "input": "Summarize the most relevant context for a returning chatbot user.",
+      "mode": "auto"
+    }'`;
     }
 
     async function loadTrustData() {

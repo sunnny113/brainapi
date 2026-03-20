@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Memory API for AI Agents and Context Workflows | BrainAPI</title>
+  <meta name="description" content="Use BrainAPI as the execution layer for AI agents that need memory, routing, fallback, and a stable developer API across providers." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://api.brainapi.site/memory-api-for-ai-agents" />
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Memory API for AI Agents and Context Workflows | BrainAPI" />
+  <meta property="og:description" content="How to pair an agent memory store with BrainAPI for execution, fallbacks, and multi-provider consistency." />
+  <meta property="og:url" content="https://api.brainapi.site/memory-api-for-ai-agents" />
+  <meta property="og:image" content="https://api.brainapi.site/ui/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
+  <link rel="stylesheet" href="/ui/seo.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="nav">
+      <a class="brand" href="/"><span class="logo">B</span><span>BrainAPI</span></a>
+      <nav class="nav-links">
+        <a href="/">Home</a>
+        <a href="/blog">Blog</a>
+        <a href="/chatbot-memory-api">Chatbot API</a>
+        <a href="/ui/quickstart.html">Quickstart</a>
+        <a class="btn btn-primary" href="/ui/signup.html">Get API Key</a>
+      </nav>
+    </header>
+
+    <main class="article">
+      <section class="hero compact">
+        <span class="badge">Keyword target: memory api for ai agents</span>
+        <h1>Build memory-aware AI agents with one API for execution, routing, and provider fallback.</h1>
+        <p class="lead">A good agent stack usually has two parts: a memory system that decides what to remember, and an execution layer that turns that context into reliable model calls. BrainAPI helps with the second part so your agent code stays clean while your memory architecture evolves.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Why this matters for agents</h2>
+        <p class="copy">Agents are more fragile than chatbots because they often need to recall previous steps, keep tool results, summarize work, and route requests differently based on cost or latency. If every provider requires a new payload shape, your agent orchestration becomes the bottleneck.</p>
+        <ul>
+          <li>Store the agent's memory state in your own durable system.</li>
+          <li>Fetch only the context the next step needs.</li>
+          <li>Send the final execution request through BrainAPI.</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>BrainAPI's role in an agent stack</h2>
+        <div class="grid-3">
+          <article class="card">
+            <div class="eyebrow">Cheap mode</div>
+            <h3 class="card-title">Background reasoning</h3>
+            <p class="copy">Use lower-cost requests for summaries, notes, or internal agent updates.</p>
+          </article>
+          <article class="card">
+            <div class="eyebrow">Fast mode</div>
+            <h3 class="card-title">Interactive steps</h3>
+            <p class="copy">Respond quickly when the user is waiting for the next action or update.</p>
+          </article>
+          <article class="card">
+            <div class="eyebrow">Best mode</div>
+            <h3 class="card-title">High-value completions</h3>
+            <p class="copy">Route premium prompts when quality matters more than latency or cost.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Reference architecture</h2>
+        <ol>
+          <li>Agent receives a task and loads the current session state.</li>
+          <li>Your app retrieves relevant memory from its own store.</li>
+          <li>Your orchestrator composes the step prompt or tool result.</li>
+          <li>BrainAPI handles the AI request, fallback, and normalized response.</li>
+          <li>Your app saves a new summary or memory snapshot for later steps.</li>
+        </ol>
+      </section>
+
+      <section class="panel">
+        <h2>Example request</h2>
+        <div class="code-panel">
+          <div class="code-top"><span>Unified agent request</span><span>cURL</span></div>
+          <pre>curl -X POST https://api.brainapi.site/api/v1/ai \
+  -H "X-API-Key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "text",
+    "input": "Use the attached agent summary and produce the next action.",
+    "mode": "auto",
+    "max_output_tokens": 240
+  }'</pre>
+        </div>
+      </section>
+
+      <section class="cta-panel">
+        <div class="eyebrow" style="color: #6ee7b7;">Related guides</div>
+        <h2>Need a concrete implementation path?</h2>
+        <p class="lead">Read <a href="/blog/ai-memory-api-for-chatbots">AI Memory API for Chatbots</a> for architecture choices or <a href="/blog/openai-memory-api-alternative">OpenAI Memory API Alternative</a> for product comparison positioning.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="/ui/signup.html">Get API Key</a>
+          <a class="btn btn-secondary" href="/blog">Browse blog</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>BrainAPI</span>
+      <span><a href="/blog">Blog</a> | <a href="/chatbot-memory-api">Chatbot API</a> | <a href="/status">Status</a></span>
+    </footer>
+  </div>
+</body>
+</html>

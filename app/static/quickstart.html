@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BrainAPI Quickstart</title>
-  <meta name="description" content="BrainAPI quickstart docs for signup, API key usage, unified requests, and support." />
+  <title>BrainAPI Quickstart for Chatbot and AI API Workflows</title>
+  <meta name="description" content="Quickstart guide for BrainAPI, including signup, API key usage, unified requests, and context-heavy chatbot and agent workflows." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://api.brainapi.site/ui/quickstart.html" />
   <link rel="icon" type="image/svg+xml" href="/ui/favicon.svg" />
   <style>
     :root {
@@ -53,6 +55,7 @@
     <header class="nav">
       <a class="brand" href="/"><span class="logo">B</span><span>BrainAPI</span></a>
       <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        <a href="/blog">Blog</a>
         <a href="/status">Status</a>
         <a href="/ui/signup.html">Signup</a>
         <a href="/ui/login.html">Login</a>
@@ -63,7 +66,7 @@
       <section class="hero">
         <div class="eyebrow">Quickstart</div>
         <h1>Go from signup to first successful request in a few minutes.</h1>
-        <p class="lead">BrainAPI is built for fast activation. Create an account, get an API key instantly, call the unified endpoint, and check service status from a public page before you commit more time.</p>
+        <p class="lead">BrainAPI is built for fast activation. Create an account, get an API key instantly, call the unified endpoint, and use these guides if you are building chatbots, agents, or context-heavy workflows.</p>
       </section>
 
       <section class="grid">
@@ -104,7 +107,7 @@
   -d '{
     "type": "text",
     "input": "Write a welcome message for a returning SaaS user.",
-    "mode": "fast"
+    "mode": "auto"
   }'</pre>
           </div>
         </article>
@@ -150,6 +153,19 @@
         </article>
 
         <article class="panel">
+          <div class="eyebrow">Guides</div>
+          <h2>Memory and chatbot resources</h2>
+          <p class="copy">Use these pages when you need implementation help beyond the base quickstart.</p>
+          <table class="table">
+            <tbody>
+              <tr><td><a href="/chatbot-memory-api">/chatbot-memory-api</a></td><td>Commercial landing page for memory-aware chatbot positioning</td></tr>
+              <tr><td><a href="/memory-api-for-ai-agents">/memory-api-for-ai-agents</a></td><td>Agent workflow and routing architecture</td></tr>
+              <tr><td><a href="/blog/store-ai-context-nodejs">/blog/store-ai-context-nodejs</a></td><td>Node.js implementation pattern</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="panel">
           <div class="eyebrow">Trust</div>
           <h2>Support and status</h2>
           <p class="copy">Prospects should not have to guess whether the product is maintained. BrainAPI exposes a public status page and a working support inbox.</p>
@@ -163,7 +179,7 @@
 
     <footer class="footer" style="margin-top:26px;">
       <span>BrainAPI quickstart</span>
-      <span><a href="/">Home</a> | <a href="/status">Status</a> | <a href="/ui/signup.html">Get API Key</a></span>
+      <span><a href="/">Home</a> | <a href="/blog">Blog</a> | <a href="/status">Status</a> | <a href="/ui/signup.html">Get API Key</a></span>
     </footer>
   </div>
 
@@ -189,7 +205,7 @@
   -d '{
     "type": "text",
     "input": "Write a welcome message for a returning SaaS user.",
-    "mode": "fast"
+    "mode": "auto"
   }'`;
 
     fetch("/api/v1/public/status")

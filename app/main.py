@@ -109,6 +109,15 @@ static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
     app.mount("/ui", StaticFiles(directory=str(static_dir)), name="ui")
 
+SEO_PAGE_FILES = {
+    "/blog": "blog/index.html",
+    "/chatbot-memory-api": "seo/chatbot-memory-api.html",
+    "/memory-api-for-ai-agents": "seo/memory-api-for-ai-agents.html",
+    "/blog/ai-memory-api-for-chatbots": "seo/blog-ai-memory-api-for-chatbots.html",
+    "/blog/store-ai-context-nodejs": "seo/blog-store-ai-context-nodejs.html",
+    "/blog/openai-memory-api-alternative": "seo/blog-openai-memory-api-alternative.html",
+}
+
 in_memory_rate_limiter = InMemoryRateLimiter(max_requests=settings.rate_limit_per_minute)
 redis_rate_limiter = RedisRateLimiter(settings.redis_url) if settings.redis_url else None
 in_memory_token_rate_limiter = InMemoryTokenRateLimiter()
@@ -526,6 +535,20 @@ def web_ui():
 @app.get("/status")
 def public_status_page():
     return FileResponse("app/static/status.html")
+
+
+def _register_static_marketing_page(route: str, relative_path: str) -> None:
+    page_path = static_dir / relative_path
+
+    def _page():
+        return FileResponse(page_path)
+
+    _page.__name__ = "static_marketing_page_" + route.strip("/").replace("/", "_").replace("-", "_")
+    app.add_api_route(route, _page, methods=["GET"], include_in_schema=False)
+
+
+for seo_route, seo_file in SEO_PAGE_FILES.items():
+    _register_static_marketing_page(seo_route, seo_file)
 
 
 @app.get("/favicon.ico")
@@ -1356,6 +1379,11 @@ def robots_txt():
         "Disallow: /api/\n"
         "Disallow: /docs\n"
         "Disallow: /redoc\n"
+        "Disallow: /ui/login.html\n"
+        "Disallow: /ui/signup.html\n"
+        "Disallow: /ui/forgot-password.html\n"
+        "Disallow: /ui/onboarding.html\n"
+        "Disallow: /ui/dashboard.html\n"
         f"Sitemap: {settings.public_base_url}/sitemap.xml\n"
     )
 
@@ -1363,7 +1391,18 @@ def robots_txt():
 @app.get("/sitemap.xml")
 def sitemap_xml():
     base = settings.public_base_url.rstrip("/")
-    urls = ["/", "/status", "/ui/quickstart.html", "/ui/login.html", "/ui/signup.html"]
+    urls = [
+        "/",
+        "/status",
+        "/ui/quickstart.html",
+        "/ui/developer.html",
+        "/blog",
+        "/chatbot-memory-api",
+        "/memory-api-for-ai-agents",
+        "/blog/ai-memory-api-for-chatbots",
+        "/blog/store-ai-context-nodejs",
+        "/blog/openai-memory-api-alternative",
+    ]
     xml_entries = "\n".join(
         f"  <url><loc>{base}{u}</loc><changefreq>weekly</changefreq></url>"
         for u in urls
