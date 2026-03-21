@@ -85,3 +85,15 @@ box-shadow:
 0 0 20px rgba(0,200,150,.6),
 0 0 40px rgba(124,108,242,.4);
 }
+
+/* Email overflow handling (support/contact sections) */
+.email-wrap{
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.support-email-row{
+  min-width: 0;
+}
