@@ -12,7 +12,15 @@ from .db import SessionLocal
 from .email_validation import normalize_email, validate_email_address
 from .launch import support_email_value
 from .models import APIKey, EmailEvent, SignupLead, UserAccount
+import socket
 
+# Force IPv4 (VERY IMPORTANT FIX)
+original_getaddrinfo = socket.getaddrinfo
+
+def getaddrinfo_ipv4(*args, **kwargs):
+    return [info for info in original_getaddrinfo(*args, **kwargs) if info[0] == socket.AF_INET]
+
+socket.getaddrinfo = getaddrinfo_ipv4
 
 logger = logging.getLogger("brainapi.email")
 
@@ -245,18 +253,21 @@ def _send_smtp_email(*, recipient_email: str, subject: str, body_text: str) -> N
     message["From"] = f"{settings.email_from_name} <{settings.email_from_address}>"
     message["To"] = recipient_email
     message["Subject"] = subject
+
     if settings.email_reply_to:
         message["Reply-To"] = settings.email_reply_to
+
     message.set_content(body_text)
 
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=settings.smtp_timeout_seconds) as server:
-        if settings.smtp_use_tls:
-            server.starttls()
+    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as server:
+        server.ehlo()              # 👈 add this
+        server.starttls()          # 👈 always use TLS
+        server.ehlo()              # 👈 add this again after TLS
+
         if settings.smtp_username:
             server.login(settings.smtp_username, settings.smtp_password)
+
         server.send_message(message)
-
-
 def _deliver_email(*, recipient_email: str, subject: str, body_text: str) -> dict:
     normalized_email, validation_error = _validate_recipient(recipient_email)
     if validation_error or not normalized_email:
