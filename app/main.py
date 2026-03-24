@@ -41,7 +41,7 @@ from .billing import BillingError, create_razorpay_order, handle_razorpay_webhoo
 from .config import settings
 from .db import init_db
 from .emails import (
-    dispatch_transactional_email,
+    send_transactional_email,
     email_delivery_health,
     get_lead_contact_for_api_key,
     queue_invoice_email,
@@ -263,11 +263,11 @@ def _schedule_email_delivery(background_tasks: BackgroundTasks | None, event_id:
         return
 
     if background_tasks is not None:
-        background_tasks.add_task(dispatch_transactional_email, clean_event_id)
+        background_tasks.add_task(send_transactional_email, clean_event_id)
         logger.info("email_delivery_scheduled context=%s event_id=%s", context, clean_event_id)
         return
 
-    dispatch_transactional_email(clean_event_id)
+    send_transactional_email(clean_event_id)
 
 
 def _queue_and_dispatch_email(
