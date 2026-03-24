@@ -79,6 +79,15 @@ class Settings(BaseSettings):
     trial_signup_enabled: bool = True
     trial_default_days: int = 7
     trial_default_rate_limit_per_minute: int = 60
+    
+    
+    
+
+    # Email delivery
+    # - EMAIL_PROVIDER: "smtp" (default) or "resend"
+    # - RESEND_API_KEY: required when EMAIL_PROVIDER=resend
+    resend_api_key: str = Field(default="", validation_alias=AliasChoices("RESEND_API_KEY"))
+    email_provider: str = Field(default="smtp", validation_alias=AliasChoices("EMAIL_PROVIDER"))  # "smtp" or "resend"
 
     smtp_host: str = ""
     smtp_port: int = 587
@@ -95,6 +104,8 @@ class Settings(BaseSettings):
     founder_name: str = "BrainAPI founder"
     blocked_email_domains: str = "example.com,test.com,fake.com"
     skip_email_in_development: bool = True
+    email_max_retry_attempts: int = Field(default=3, validation_alias=AliasChoices("EMAIL_MAX_RETRY_ATTEMPTS"))
+    email_retry_backoff: str = Field(default="exponential", validation_alias=AliasChoices("EMAIL_RETRY_BACKOFF"))  # "exponential" or "linear"
     auth_token_secret: str = "dev-brainapi-auth-secret"
     auth_token_secret_previous: str = ""
     password_reset_token_ttl_minutes: int = 30

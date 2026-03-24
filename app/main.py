@@ -52,6 +52,7 @@ from .emails import (
     send_transactional_email,
     schedule_trial_reminder_emails,
     send_pending_emails,
+    validate_email_configuration,
 )
 from .launch import launch_metrics_summary, public_status_payload, support_email_value
 from .leads import SignupError, create_trial_signup
@@ -515,6 +516,9 @@ def startup_event():
     if settings.require_api_key and not settings.api_key_list:
         logger.warning("REQUIRE_API_KEY is enabled but API_KEYS is empty; only DB-managed keys can authenticate")
 
+    # Validate email configuration
+    is_email_valid, email_warnings = validate_email_configuration()
+    
     email_health = email_delivery_health()
     if email_health["configured"] and not email_health["delivery_enabled"]:
         logger.warning(
@@ -574,6 +578,7 @@ def health_check():
         "provider_ready": settings.provider_ready,
         "environment": settings.environment,
         "database_persistent": not is_sqlite_database,
+        "email": email_delivery_health(),
     }
 
 
@@ -1403,14 +1408,3 @@ def sitemap_xml():
         "/blog/store-ai-context-nodejs",
         "/blog/openai-memory-api-alternative",
     ]
-    xml_entries = "\n".join(
-        f"  <url><loc>{base}{u}</loc><changefreq>weekly</changefreq></url>"
-        for u in urls
-    )
-    return PlainTextResponse(
-        f'<?xml version="1.0" encoding="UTF-8"?>\n'
-        f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-        f"{xml_entries}\n"
-        f"</urlset>\n",
-        media_type="application/xml",
-    )
