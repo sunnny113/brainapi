@@ -507,7 +507,23 @@ async def startup_event():
     except Exception as e:
         print(f"❌ DB init failed: {e}")
 
-    # 2. PRODUCTION SECRET CHECK (SAFE)
+    # 2. AUTO FIX DB (IMPORTANT)
+    try:
+        from sqlalchemy import text
+        from app.db.session import engine  # adjust if needed
+
+        with engine.connect() as conn:
+            conn.execute(text("""
+                ALTER TABLE email_events
+                ADD COLUMN IF NOT EXISTS html_body TEXT;
+            """))
+            conn.commit()
+
+        print("✅ DB auto-fixed (html_body added)")
+    except Exception as e:
+        print(f"⚠️ DB auto-fix skipped: {e}")
+
+    # 3. PRODUCTION SECRET CHECK (SAFE)
     try:
         if settings.environment.lower() == "production":
             token_secret = (settings.auth_token_secret or "").strip()
@@ -516,14 +532,6 @@ async def startup_event():
     except Exception as e:
         print(f"❌ Secret check error: {e}")
 
-    # 3. API KEY WARNING (SAFE)
-    try:
-        if settings.require_api_key and not settings.api_key_list:
-            logger.warning("REQUIRE_API_KEY enabled but API_KEYS empty")
-    except Exception as e:
-        print(f"❌ API key check error: {e}")
-
-    # 4. EMAIL CHECK (REMOVED CRASH SOURCE)
     print("📧 Email system ready (Brevo)")
     
     email_health = email_delivery_health()
