@@ -508,20 +508,32 @@ async def startup_event():
         print(f"❌ DB init failed: {e}")
 
     # 2. AUTO FIX DB (IMPORTANT)
-    try:
-        from sqlalchemy import text
-        from app.db.session import engine  # adjust if needed
+   try:
+    from sqlalchemy import text
+    from app.db.session import engine  # adjust if needed
 
-        with engine.connect() as conn:
+    with engine.connect() as conn:
+        # Check if column exists
+        result = conn.execute(text("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='email_events' AND column_name='html_body';
+        """))
+
+        exists = result.fetchone()
+
+        if not exists:
             conn.execute(text("""
                 ALTER TABLE email_events
-                ADD COLUMN IF NOT EXISTS html_body TEXT;
+                ADD COLUMN html_body TEXT;
             """))
             conn.commit()
+            print("✅ html_body column created")
+        else:
+            print("✅ html_body already exists")
 
-        print("✅ DB auto-fixed (html_body added)")
-    except Exception as e:
-        print(f"⚠️ DB auto-fix skipped: {e}")
+except Exception as e:
+    print(f"❌ DB fix failed: {e}")
 
     # 3. PRODUCTION SECRET CHECK (SAFE)
     try:
