@@ -1,11 +1,17 @@
+import logging
+
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from .config import settings
 
 
+logger = logging.getLogger("brainapi.db")
+
+
 class Base(DeclarativeBase):
     pass
+
 
 
 engine = create_engine(settings.normalized_database_url, pool_pre_ping=True)

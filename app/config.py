@@ -1,8 +1,31 @@
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+REQUIRED_PUBLIC_PATHS: set[str] = {
+    "/",
+    "/ui",
+    "/blog",
+    "/chatbot-memory-api",
+    "/memory-api-for-ai-agents",
+    "/health",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/api/v1/billing/razorpay/webhook",
+    "/api/v1/public/plans",
+    "/api/v1/public/reviews",
+    "/api/v1/public/signup-trial",
+    "/api/v1/auth/signup",
+    "/api/v1/auth/login",
+    "/api/v1/auth/request-reset",
+    "/api/v1/auth/reset-password",
+}
+
 
 class Settings(BaseSettings):
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_name: str = "BrainAPI"
@@ -119,9 +142,14 @@ class Settings(BaseSettings):
 
     @property
     def public_path_list(self) -> list[str]:
-        return self.csv_to_list(self.public_paths)
+        paths = self.csv_to_list(self.public_paths)
+        for route in REQUIRED_PUBLIC_PATHS:
+            if route not in paths:
+                paths.append(route)
+        return paths
 
     @property
+
     def cors_allow_origins_list(self) -> list[str]:
         values = self.csv_to_list(self.cors_allow_origins)
         return values or ["*"]

@@ -1383,7 +1383,7 @@ def robots_txt():
 
 @app.get("/sitemap.xml")
 def sitemap_xml():
-    base = settings.public_base_url.rstrip("/")
+    base = settings.public_base_url.rstrip("/") or "http://localhost:8000"
     urls = [
         "/",
         "/status",
@@ -1396,3 +1396,17 @@ def sitemap_xml():
         "/blog/store-ai-context-nodejs",
         "/blog/openai-memory-api-alternative",
     ]
+
+    xml_lines = [
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>",
+        "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">",
+    ]
+    for path in urls:
+        full_url = f"{base}{path}"
+        xml_lines.append("  <url>")
+        xml_lines.append(f"    <loc>{full_url}</loc>")
+        xml_lines.append("  </url>")
+    xml_lines.append("</urlset>")
+
+    return PlainTextResponse("\n".join(xml_lines), media_type="application/xml")
+
