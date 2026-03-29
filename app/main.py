@@ -40,19 +40,16 @@ from .ai_gateway.types import UnifiedAIRequest, UnifiedAIResponse
 from .billing import BillingError, create_razorpay_order, handle_razorpay_webhook, verify_and_mark_paid
 from .config import settings
 from .db import init_db
+# app/main.py
+
 from .emails import (
-    dispatch_transactional_email,
-    email_delivery_health,
-    get_lead_contact_for_api_key,
-    queue_invoice_email,
-    queue_password_reset_email,
-    queue_payment_success_email,
-    queue_welcome_email,
-    send_custom_email,
     send_transactional_email,
-    schedule_trial_reminder_emails,
-    send_pending_emails,
-    validate_email_configuration,
+    email_delivery_health,
+    queue_password_reset_email,
+    send_custom_email,
+    queue_invoice_email,          # ADD THIS
+    queue_payment_success_email,  # ADD THIS
+    queue_welcome_email           # ADD THIS (also used in /signup)
 )
 from .launch import launch_metrics_summary, public_status_payload, support_email_value
 from .leads import SignupError, create_trial_signup
@@ -505,30 +502,20 @@ app.add_middleware(RateLimitMiddleware)
 
 @app.on_event("startup")
 def startup_event():
-    if settings.auto_create_tables:
-        init_db()
-
-    if settings.environment.lower() == "production":
-        token_secret = (settings.auth_token_secret or "").strip()
-        if not token_secret or len(token_secret) < 32:
-            raise RuntimeError("AUTH_TOKEN_SECRET must be set and secure in production")
-
-    if settings.require_api_key and not settings.api_key_list:
-        logger.warning("REQUIRE_API_KEY is enabled but API_KEYS is empty; only DB-managed keys can authenticate")
-
-    # Validate email configuration
-    is_email_valid, email_warnings = validate_email_configuration()
+    """
+    Triggers the database self-healing logic on boot.
+    Uses local imports to prevent circular dependency crashes.
+    """
+    from .db import _ensure_schema_updates
     
-    email_health = email_delivery_health()
-    if email_health["configured"] and not email_health["delivery_enabled"]:
-        logger.warning(
-            "SMTP is configured but email delivery is disabled. ENVIRONMENT=%s SKIP_EMAIL_IN_DEVELOPMENT=%s",
-            settings.environment,
-            settings.skip_email_in_development,
-        )
-    elif settings.environment.lower() == "production" and not email_health["configured"]:
-        logger.warning("Production email delivery is not configured. Set SMTP_HOST and EMAIL_FROM_ADDRESS.")
-
+    logger.info("Initializing BrainAPI backend...")
+    try:
+        _ensure_schema_updates()
+        logger.info("Database migration check completed.")
+    except Exception as e:
+        # We catch the error so the server doesn't die, 
+        # allowing you to at least see the logs or access the UI.
+        logger.error(f"Startup Database Error: {e}")
 from fastapi.responses import FileResponse
 
 @app.get("/")
