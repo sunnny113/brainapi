@@ -3,6 +3,7 @@ import os
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")
 
+
 def send_email(to_email, subject, html_content):
     url = "https://api.brevo.com/v3/smtp/email"
 
@@ -30,18 +31,14 @@ def send_email(to_email, subject, html_content):
         raise Exception(f"Email failed: {response.text}")
 
 
-# keep old calls working
-def dispatch_transactional_email(to_email, subject, html_content):
-    return send_email(to_email, subject, html_content)
-def email_delivery_health():
-    return {
-        "status": "ok",
-        "provider": "brevo"
-    }
-    # -----------------------------
+# -----------------------------
 # Compatibility functions (for tests)
 # -----------------------------
 
+def dispatch_transactional_email(to_email, subject, html_content):
+    return send_email(to_email, subject, html_content)
+
+
 def email_delivery_health():
     return {
         "status": "ok",
@@ -49,12 +46,7 @@ def email_delivery_health():
     }
 
 
-def dispatch_transactional_email(to_email, subject, html_content):
-    return send_email(to_email, subject, html_content)
-
-
 def get_lead_contact_for_api_key(api_key: str):
-    # simple mock for now
     return {
         "email": "test@example.com",
         "name": "Test User"
@@ -62,7 +54,6 @@ def get_lead_contact_for_api_key(api_key: str):
 
 
 def queue_email_event(*args, **kwargs):
-    # simulate queue system (tests expect this)
     return {
         "status": "queued"
     }
