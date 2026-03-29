@@ -41,14 +41,21 @@ from .billing import BillingError, create_razorpay_order, handle_razorpay_webhoo
 from .config import settings
 from .db import init_db
 # app/main.py
+# app/main.py
+
 from .emails import (
     dispatch_transactional_email,
     email_delivery_health,
     queue_password_reset_email,
     send_custom_email,
-    queue_invoice_email,          # ADD THIS
-    queue_payment_success_email,  # ADD THIS
-    queue_welcome_email           # ADD THIS (also used in /signup)
+    queue_invoice_email,
+    queue_payment_success_email,
+    queue_welcome_email,
+    # ADD THESE FOUR TO FIX THE PYLANCE ERRORS:
+    schedule_trial_reminder_emails,
+    send_pending_emails,
+    get_lead_contact_for_api_key,
+    process_email_queue
 )
 from .launch import launch_metrics_summary, public_status_payload, support_email_value
 from .leads import SignupError, create_trial_signup
